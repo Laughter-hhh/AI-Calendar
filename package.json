@@ -1,0 +1,17 @@
+{
+  "name": "ai-calendar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Calendar - AI 原生的个人时间管理助手（MVP）",
+  "scripts": {
+    "setup": "node database/init.mjs",
+    "dev": "pnpm --dir frontend dev",
+    "build": "pnpm --dir frontend build",
+    "start": "pnpm --dir frontend start",
+    "lint": "pnpm --dir frontend lint",
+    "test:smoke": "node scripts/smoke-test.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

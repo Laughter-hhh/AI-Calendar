@@ -1,0 +1,131 @@
+// AI Calendar 冒烟测试：验证 MVP 核心闭环
+// 使用：先启动服务（pnpm dev 或 pnpm start），然后运行：
+//   node scripts/smoke-test.mjs
+// 可通过环境变量 BASE_URL 指定服务地址，默认 http://localhost:3000
+
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
+let cookie = "";
+const failures = [];
+
+function todayStr(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+async function api(path, { method = "GET", body } = {}) {
+  const headers = { Accept: "application/json" };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (cookie) headers.Cookie = cookie;
+  const res = await fetch(BASE_URL + path, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // 非 JSON 响应（如首页 HTML）
+  }
+  const setCookie = res.headers.get("set-cookie");
+  if (setCookie) cookie = setCookie.split(";")[0];
+  return { status: res.status, data, text };
+}
+
+function check(name, cond, detail = "") {
+  if (cond) {
+    console.log(`  ✅ ${name}`);
+  } else {
+    failures.push(name);
+    console.log(`  ❌ ${name} ${detail}`);
+  }
+}
+
+async function main() {
+  console.log(`冒烟测试：${BASE_URL}`);
+
+  console.log("\n1) 首页可访问");
+  const home = await api("/");
+  check("首页返回 200 且包含产品名", home.status === 200 && home.text.includes("AI Calendar"), `status=${home.status}`);
+
+  console.log("\n2) 注册");
+  const email = `smoke-${Date.now()}@test.local`;
+  const reg = await api("/api/auth/register", { method: "POST", body: { email, password: "123456" } });
+  check("注册成功并返回用户", reg.status === 200 && reg.data?.user?.email === email, JSON.stringify(reg.data));
+
+  console.log("\n3) AI 解析：从今天开始连续四天晚上八点学习 Python");
+  const r1 = await api("/api/ai/parse", { method: "POST", body: { text: "从今天开始连续四天晚上八点学习 Python" } });
+  const ev1 = r1.data?.result?.events ?? [];
+  check("解析出 4 个事件", r1.status === 200 && ev1.length === 4, `count=${ev1.length}`);
+  check("每天 20:00 且日期连续", ev1.every((e, i) => e.time === "20:00" && e.date === todayStr(i)), JSON.stringify(ev1));
+  check("标题正确", ev1[0]?.title === "学习 Python", `title=${ev1[0]?.title}`);
+
+  console.log("\n4) AI 解析：明天下午三点开会");
+  const r2 = await api("/api/ai/parse", { method: "POST", body: { text: "明天下午三点开会" } });
+  const ev2 = r2.data?.result?.events ?? [];
+  check("解析出 1 个事件", r2.status === 200 && ev2.length === 1, `count=${ev2.length}`);
+  check(
+    "日期=明天 时间=15:00 标题=开会",
+    ev2[0]?.date === todayStr(1) && ev2[0]?.time === "15:00" && ev2[0]?.title === "开会",
+    JSON.stringify(ev2)
+  );
+
+  console.log("\n5) 信息缺失时追问");
+  const r3 = await api("/api/ai/parse", { method: "POST", body: { text: "晚上八点学习 Python" } });
+  check("返回 missing 包含 date", r3.status === 200 && r3.data?.result?.missing.includes("date"), JSON.stringify(r3.data?.result));
+  const r4 = await api("/api/ai/parse", {
+    method: "POST",
+    body: { text: "明天", context: { title: "学习 Python", time: "20:00" } },
+  });
+  const ev4 = r4.data?.result?.events ?? [];
+  check(
+    "补充信息后解析成功",
+    ev4.length === 1 && ev4[0].date === todayStr(1) && ev4[0].time === "20:00" && ev4[0].title === "学习 Python",
+    JSON.stringify(ev4)
+  );
+
+  console.log("\n6) 保存 / 查询 / 修改 / 删除");
+  const created = await api("/api/events", {
+    method: "POST",
+    body: { title: "开会", date: todayStr(1), time: "15:00", sourceText: "明天下午三点开会" },
+  });
+  const eventId = created.data?.event?.id;
+  check("创建事件成功", created.status === 201 && eventId !== undefined, JSON.stringify(created.data));
+
+  const list = await api(`/api/events?date=${todayStr(1)}`);
+  check("查询到该事件", list.status === 200 && list.data?.events?.some((e) => e.id === eventId), JSON.stringify(list.data));
+
+  const patched = await api(`/api/events/${eventId}`, {
+    method: "PATCH",
+    body: { title: "产品评审会议", time: "15:30" },
+  });
+  check(
+    "修改成功",
+    patched.status === 200 && patched.data?.event?.title === "产品评审会议" && patched.data?.event?.startTime === "15:30",
+    JSON.stringify(patched.data)
+  );
+
+  const del = await api(`/api/events/${eventId}`, { method: "DELETE" });
+  check("删除成功", del.status === 200 && del.data?.ok === true, JSON.stringify(del.data));
+
+  console.log("\n7) 未登录访问被拒绝");
+  cookie = "";
+  const anon = await api("/api/events");
+  check("返回 401", anon.status === 401, `status=${anon.status}`);
+
+  if (failures.length === 0) {
+    console.log("\n🎉 全部通过");
+    process.exit(0);
+  } else {
+    console.log(`\n❌ 失败 ${failures.length} 项：${failures.join("、")}`);
+    process.exit(1);
+  }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -80,6 +80,7 @@ providers/local.ts   纯正则规则解析（无需网络）
 - **路径别名**：TypeScript 和 Turbopack 对 `tsconfig.json` 里 paths 别名的解析基准不同，容易踩坑。目前跨目录引用统一用相对路径，避免两套解析打架。
 - **中文编码**：命令行工具发送中文请求体时要注意编码，测试脚本用 Node.js 编写（天然 UTF-8），避免 PowerShell 的编码问题。
 - **Node 版本**：项目需要 Node 22.5+（使用内置 SQLite），如果本机没有装 Node，需要在 PATH 中配置好。
+- **时区**：服务器默认是 UTC，而用户在中国。如果"今天"用服务器本地时间算，晚上 8 点到 12 点之间创建的日程会差一天。解决办法：统一按中国时区计算日期（`backend/ai/date-utils.ts` 和 `frontend/src/lib/date.ts`），并在 pm2 环境变量里设置 `TZ=Asia/Shanghai`。这也是一个典型的"本地正常、上线出错"的问题来源。
 
 ## 8. 推荐阅读顺序
 

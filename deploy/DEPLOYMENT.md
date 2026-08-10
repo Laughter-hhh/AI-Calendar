@@ -124,10 +124,4 @@ cp /opt/ai-calendar/database/data/ai-calendar.db ~/ai-calendar-backup.db
 
 ## 如果不想用 Git 仓库
 
-也可以把本地项目压缩后上传到服务器（用 scp 或宝塔面板的文件上传），然后手动执行：
-
-```bash
-sudo bash deploy/server-setup.sh  # 但脚本需要仓库地址用于更新
-```
-
-推荐还是用 GitHub/Gitee，因为以后每次更新代码只需要 `git pull`，省心。
+一键脚本依赖 Git 仓库地址（用于首次拉取和以后的更新）。如果暂时没有仓库，也可以手动部署：把本地项目（排除 `node_modules` 和 `.next`）压缩后上传到服务器，装好 Node.js 和 pnpm 后依次执行 `pnpm install`、`pnpm build`、`pm2 start`。但还是建议建一个仓库，以后更新会省心很多。

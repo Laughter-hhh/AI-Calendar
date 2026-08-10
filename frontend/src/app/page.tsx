@@ -5,19 +5,7 @@ import AuthBar from "@/components/AuthBar";
 import AuthCard from "@/components/AuthCard";
 import EventList from "@/components/EventList";
 import AiInput from "@/components/AiInput";
-
-function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function todayLabel(): string {
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  }).format(new Date());
-}
+import { todayLabel, todayStr } from "@/lib/date";
 
 export default async function Home() {
   const store = await cookies();

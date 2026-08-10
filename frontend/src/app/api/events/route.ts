@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createEvent, listEvents } from "@/lib/events";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
-
-function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { todayStr } from "@/lib/date";
 
 export async function GET(request: Request) {
   const store = await cookies();

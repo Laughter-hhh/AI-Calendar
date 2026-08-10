@@ -1,6 +1,7 @@
 // 本地规则解析器：不依赖网络和 API Key
 // 用正则把常见的中文时间表达解析成结构化事件，保证 MVP 在没有 AI 服务时也能跑通
 import type { AIParser, ParseContext, ParsedEvent, ParseResult } from "../types";
+import { addDaysStr, todayStr, weekdayOf } from "../date-utils";
 
 const CHINESE_NUM: Record<string, number> = {
   零: 0, 一: 1, 两: 2, 二: 2, 三: 3, 四: 4,
@@ -13,21 +14,6 @@ const WEEKDAY_NAME: Record<string, number> = {
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
-}
-
-function fmtDate(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-function today(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function addDays(base: Date, days: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d;
 }
 
 /** 把 "四" / "14" / "十四" 转成数字 */
@@ -62,16 +48,16 @@ function resolveDate(text: string): { date: string; rest: string } | null {
   if (relative) {
     const days = /后天/.test(relative[0]) ? 2 : /明天|明日/.test(relative[0]) ? 1 : 0;
     rest = rest.replace(relative[0], " ");
-    return { date: fmtDate(addDays(today(), days)), rest: rest.replace(/\s+/g, " ").trim() };
+    return { date: addDaysStr(todayStr(), days), rest: rest.replace(/\s+/g, " ").trim() };
   }
 
   const weekday = rest.match(/(下|这)?(?:周|星期|礼拜)([日天一二三四五六])/);
   if (weekday) {
     const target = WEEKDAY_NAME[weekday[2]];
-    let diff = (target - today().getDay() + 7) % 7;
+    let diff = (target - weekdayOf(todayStr()) + 7) % 7;
     if (weekday[1] === "下") diff += 7;
     rest = rest.replace(weekday[0], " ");
-    return { date: fmtDate(addDays(today(), diff)), rest: rest.replace(/\s+/g, " ").trim() };
+    return { date: addDaysStr(todayStr(), diff), rest: rest.replace(/\s+/g, " ").trim() };
   }
 
   const monthDay = rest.match(/(\d{1,2})月(\d{1,2})[日号]?/);
@@ -79,8 +65,10 @@ function resolveDate(text: string): { date: string; rest: string } | null {
     const month = Number(monthDay[1]);
     const day = Number(monthDay[2]);
     if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = Number(todayStr().slice(0, 4));
       rest = rest.replace(monthDay[0], " ");
-      return { date: fmtDate(new Date(today().getFullYear(), month - 1, day)), rest: rest.replace(/\s+/g, " ").trim() };
+      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      return { date: addDaysStr(dateStr, 0), rest: rest.replace(/\s+/g, " ").trim() };
     }
   }
 
@@ -202,14 +190,14 @@ export const localParser: AIParser = {
     if (!time) missing.push("time");
 
     // 连续 N 天时默认从今天开始（"连续四天" 隐含起始点）
-    const startDate = date ?? (repeatDays > 0 ? fmtDate(today()) : null);
+    const startDate = date ?? (repeatDays > 0 ? todayStr() : null);
 
     let events: ParsedEvent[] = [];
     if (title && startDate && time) {
       for (let i = 0; i < (repeatDays > 0 ? repeatDays : 1); i++) {
         events.push({
           title,
-          date: repeatDays > 0 ? fmtDate(addDays(today(), i + (date ? daysBetween(today(), startDate) : 0))) : startDate,
+          date: repeatDays > 0 ? addDaysStr(startDate, i) : startDate,
           time,
           endTime: resolvedTime.endTime,
           repeat: repeatDays > 0 ? null : repeat,
@@ -235,8 +223,3 @@ export const localParser: AIParser = {
     });
   },
 };
-
-function daysBetween(from: Date, to: string): number {
-  const [y, m, d] = to.split("-").map(Number);
-  return Math.round((new Date(y, m - 1, d).getTime() - from.getTime()) / 86400000);
-}

@@ -19,10 +19,12 @@ APP_DIR="/opt/ai-calendar"
 PORT="${PORT:-3000}"
 
 # Node 版本要求：22.13+（22.13 起内置 SQLite 无需额外参数）
-NODE_VERSION="v24.0.0"
+NODE_VERSION="${NODE_VERSION:-v24.0.0}"
 NODE_DIR="/usr/local/lib/nodejs"
-NODE_MIRROR="https://npmmirror.com/mirrors/node"
-NPM_MIRROR="https://registry.npmmirror.com"
+# 国内服务器默认走国内镜像；海外服务器（如 Google Cloud）可这样加速：
+#   NODE_MIRROR=https://nodejs.org/dist NPM_MIRROR=https://registry.npmjs.org sudo bash server-setup.sh ...
+NODE_MIRROR="${NODE_MIRROR:-https://npmmirror.com/mirrors/node}"
+NPM_MIRROR="${NPM_MIRROR:-https://registry.npmmirror.com}"
 
 log()  { echo -e "\033[32m[部署]\033[0m $*"; }
 warn() { echo -e "\033[33m[注意]\033[0m $*"; }

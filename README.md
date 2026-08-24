@@ -62,6 +62,8 @@ pnpm start
 
 想让别人也能打开这个网站，参考 [部署指南](deploy/DEPLOYMENT.md)：申请一台国内免费云服务器，运行一键部署脚本即可（保留 SQLite，国内访问快，适合小范围测试）。
 
+如果选择 Google Cloud 免费服务器，见 [Google Cloud 部署指南](deploy/GCP-DEPLOYMENT.md)（含免费额度限制说明和防扣费要点）。
+
 ## 🤖 配置 AI 服务（可选）
 
 不配置也能用（走内置本地解析器）。配置后使用 OpenAI 兼容接口：

@@ -37,8 +37,8 @@ fi
 # ---------- 0. 基础依赖 + 低配机器开 swap ----------
 log "安装基础依赖..."
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y curl ca-certificates xz-utils git build-essential
+apt-get -o DPkg::Lock::Timeout=600 update -y
+apt-get -o DPkg::Lock::Timeout=600 install -y curl ca-certificates xz-utils git build-essential
 
 MEM_MB=$(free -m | awk '/Mem:/{print $2}')
 if [ ! -f /swapfile ] && [ "$MEM_MB" -lt 2048 ]; then
@@ -68,6 +68,8 @@ else
   ln -sf "${NODE_DIR}/node-${NODE_VERSION}-linux-x64/bin/node" /usr/local/bin/node
   ln -sf "${NODE_DIR}/node-${NODE_VERSION}-linux-x64/bin/npm"  /usr/local/bin/npm
   ln -sf "${NODE_DIR}/node-${NODE_VERSION}-linux-x64/bin/npx"  /usr/local/bin/npx
+  # 关键：让 npm 全局安装（pnpm/pm2 等）落在 /usr/local/bin，保证在 PATH 中可直接调用
+  npm config set prefix /usr/local
   log "Node.js 安装完成：$(node -v)"
 fi
 
@@ -77,6 +79,10 @@ npm config set registry "$NPM_MIRROR" || true
 # ---------- 2. pnpm + pm2 ----------
 command -v pnpm >/dev/null 2>&1 || { log "安装 pnpm..."; npm install -g pnpm; }
 command -v pm2  >/dev/null 2>&1 || { log "安装 pm2（进程守护）..."; npm install -g pm2; }
+
+# 安装后校验：如果命令仍找不到，直接报错而不是继续
+command -v pnpm >/dev/null 2>&1 || { echo "pnpm 安装后仍不可用，请检查 npm prefix 设置（npm config get prefix）"; exit 1; }
+command -v pm2  >/dev/null 2>&1 || { echo "pm2 安装后仍不可用，请检查 npm prefix 设置（npm config get prefix）"; exit 1; }
 
 # ---------- 3. 拉取代码 ----------
 if [ -d "$APP_DIR/.git" ]; then

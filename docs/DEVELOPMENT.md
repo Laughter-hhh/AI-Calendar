@@ -2,7 +2,7 @@
 
 > 本文档是项目的**交接手册**。任何新的开发者或 AI 智能体接手前，请先完整阅读本文档，再按需阅读 `docs/versions/` 下的版本说明和 `docs/ROADMAP.md`（待拓展与待确认项）。
 
-最后更新：2026-08-25（v1.0.0）
+最后更新：2026-08-25（v3.0.0）
 
 ---
 
@@ -20,8 +20,8 @@ AI Calendar 是一个 **AI 原生的个人时间管理助手**：用户用自然
 
 - **线上地址**：http://39.106.121.28:3000（阿里云 ECS，2 核 2G，Ubuntu 22.04）
 - **部署方式**：GitHub Actions 云端构建 + standalone 产物自动部署（`git push` 即上线）
-- **已完成**：注册/登录、AI 自然语言创建日程（连续 N 天）、信息追问、语音输入、按日期查看、编辑/删除、重复日程标识、手机 App（WebView 壳）、CI 自动部署、冒烟测试与页面渲染测试
-- **当前版本标签**：`v1.0.0`
+- **已完成**：注册/登录、AI 自然语言创建日程（连续 N 天）、信息追问、语音输入、按日期查看、未来 7 天视图、编辑/删除、完整重复事件（每天/每周/每月 + 截止日期 + 仅删本日）、AI 自然语言修改/删除日程、手机 App（WebView 壳）、CI 自动部署、数据库备份脚本、冒烟测试（40 项）与页面渲染测试（9 项）
+- **当前版本标签**：`v3.0.0`
 
 ## 3. 技术栈与架构
 
@@ -144,8 +144,8 @@ AI-Calendar/
 | POST | /api/events | 创建日程 | 登录 |
 | PATCH | /api/events/:id | 修改 | 登录（本人） |
 | DELETE | /api/events/:id | 删除 | 登录（本人） |
-| POST | /api/ai/parse | 自然语言解析 | 登录 |
-| POST | /api/ai/action | 自然语言修改/删除（v2.1） | 登录 |
+| POST | /api/ai/parse | 自然语言解析（创建日程） | 登录 |
+| POST | /api/ai/action | 自然语言修改/删除日程 | 登录 |
 | GET | /api/health | 健康检查 | 公开 |
 
 ## 8. AI 解析规则（本地解析器行为）
@@ -166,7 +166,7 @@ AI-Calendar/
 # 先启动服务（本地 dev 或 standalone 均可）
 pnpm dev                 # 在 frontend/ 下
 
-# API 冒烟测试（17 项）
+# API 冒烟测试（40 项）
 pnpm test:smoke          # 或 BASE_URL=... node scripts/smoke-test.mjs
 
 # 页面渲染检查（按日期查看）

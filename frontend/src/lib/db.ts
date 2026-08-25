@@ -40,11 +40,25 @@ CREATE TABLE IF NOT EXISTS events (
   end_time    TEXT,
   note        TEXT,
   repeat      TEXT,
+  repeat_until TEXT,
   source_text TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, event_date);
+CREATE TABLE IF NOT EXISTS event_exceptions (
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  date     TEXT NOT NULL,
+  PRIMARY KEY (event_id, date)
+);
 `;
+
+/** 兼容旧数据库：给已存在的 events 表补上新增的列 */
+function ensureEventsColumns(db: DatabaseSync): void {
+  const cols = db.prepare("PRAGMA table_info(events)").all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === "repeat_until")) {
+    db.exec("ALTER TABLE events ADD COLUMN repeat_until TEXT");
+  }
+}
 
 export function getDb(): DatabaseSync {
   if (db) return db;
@@ -63,6 +77,8 @@ export function getDb(): DatabaseSync {
     schema = EMBEDDED_SCHEMA;
   }
   db.exec(schema);
+  ensureEventsColumns(db);
   db.exec("PRAGMA journal_mode = WAL;");
+  db.exec("PRAGMA foreign_keys = ON;");
   return db;
 }

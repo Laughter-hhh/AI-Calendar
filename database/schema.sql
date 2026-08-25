@@ -27,7 +27,15 @@ CREATE TABLE IF NOT EXISTS events (
   end_time    TEXT,            -- HH:mm，可选
   note        TEXT,
   repeat      TEXT,            -- 未来扩展：daily / weekly / monthly ...
+  repeat_until TEXT,           -- 重复截止日期 YYYY-MM-DD（可空）
   source_text TEXT,            -- 用户输入的原始自然语言，便于追溯和优化
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, event_date);
+
+-- 重复事件的"例外日"：某一天不生成该重复事件（仅删除本日时使用）
+CREATE TABLE IF NOT EXISTS event_exceptions (
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  date     TEXT NOT NULL,
+  PRIMARY KEY (event_id, date)
+);

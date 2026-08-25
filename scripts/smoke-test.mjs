@@ -14,6 +14,19 @@ function todayStr(offset = 0) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+function shift(dateStr, days) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d) + 8 * 3600 * 1000);
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+function nextMondayStr() {
+  const t = todayStr(0);
+  const wd = new Date(`${t}T00:00:00Z`).getUTCDay();
+  return shift(t, (1 - wd + 7) % 7);
+}
+
 async function api(path, { method = "GET", body } = {}) {
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -116,13 +129,55 @@ async function main() {
   const anon = await api("/api/events");
   check("返回 401", anon.status === 401, `status=${anon.status}`);
 
+  console.log("\n8) 重复事件");
+  // 第 7 步清空了登录态，这里重新注册一个用户
+  await api("/api/auth/register", { method: "POST", body: { email: `smoke8-${Date.now()}@test.local`, password: "123456" } });
+  const daily = await api("/api/events", {
+    method: "POST",
+    body: { title: "晨跑", date: todayStr(-1), time: "07:00", repeat: "daily" },
+  });
+  const dailyId = daily.data?.event?.id;
+  check("创建每天重复事件", daily.status === 201 && dailyId !== undefined, JSON.stringify(daily.data));
+
+  const dToday = await api(`/api/events?date=${todayStr(0)}`);
+  check("今天能看到该重复事件", dToday.data?.events?.some((e) => e.id === dailyId && e.title === "晨跑"));
+  const dTomorrow = await api(`/api/events?date=${todayStr(1)}`);
+  check("明天也能看到", dTomorrow.data?.events?.some((e) => e.id === dailyId));
+
+  const baseMonday = nextMondayStr();
+  const weekly = await api("/api/events", {
+    method: "POST",
+    body: { title: "周会", date: baseMonday, time: "10:00", repeat: "weekly" },
+  });
+  const weeklyId = weekly.data?.event?.id;
+  const mondayCheck = await api(`/api/events?date=${baseMonday}`);
+  check("周一能看到周会", mondayCheck.data?.events?.some((e) => e.id === weeklyId));
+  const tuesdayCheck = await api(`/api/events?date=${shift(baseMonday, 1)}`);
+  check("周二看不到周会", !tuesdayCheck.data?.events?.some((e) => e.id === weeklyId));
+
+  const delSingle = await api(`/api/events/${dailyId}?mode=single&date=${todayStr(0)}`, { method: "DELETE" });
+  check("仅删除本日成功", delSingle.status === 200 && delSingle.data?.mode === "exception", JSON.stringify(delSingle.data));
+  const afterDelToday = await api(`/api/events?date=${todayStr(0)}`);
+  check("今天不再显示被删的重复日程", !afterDelToday.data?.events?.some((e) => e.id === dailyId));
+  const afterDelTomorrow = await api(`/api/events?date=${todayStr(1)}`);
+  check("明天仍显示", afterDelTomorrow.data?.events?.some((e) => e.id === dailyId));
+
+  const year = todayStr(0).slice(0, 4);
+  const r5 = await api("/api/ai/parse", { method: "POST", body: { text: "每天早上八点起床" } });
+  check("AI 解析每天重复", r5.data?.result?.events?.[0]?.repeat === "daily", JSON.stringify(r5.data?.result));
+  const r6 = await api("/api/ai/parse", { method: "POST", body: { text: "每周一晚上八点健身" } });
+  check("AI 解析每周一", r6.data?.result?.events?.[0]?.repeat === "weekly", JSON.stringify(r6.data?.result));
+  const r7 = await api("/api/ai/parse", { method: "POST", body: { text: "每天下午五点提醒喝水，持续到9月1日" } });
+  check("AI 解析重复截止日期", r7.data?.result?.events?.[0]?.repeatUntil === `${year}-09-01`, JSON.stringify(r7.data?.result));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
-    process.exit(0);
   } else {
     console.log(`\n❌ 失败 ${failures.length} 项：${failures.join("、")}`);
-    process.exit(1);
   }
+  // 等待网络句柄收尾，避免 Windows 上 process.exit 触发 libuv 断言
+  await new Promise((r) => setTimeout(r, 300));
+  process.exit(failures.length === 0 ? 0 : 1);
 }
 
 main().catch((err) => {

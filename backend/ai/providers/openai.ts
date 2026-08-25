@@ -27,7 +27,7 @@ export class OpenAICompatibleParser implements AIParser {
       "4. '连续N天' 生成 N 个日期连续的事件；",
       "5. 只输出 JSON，不要输出其他文字。",
       "输出格式：",
-      '{"events":[{"title":"","date":"YYYY-MM-DD","time":"HH:mm或null","endTime":"HH:mm或null","note":"","repeat":null}],"missing":[],"message":"给用户的一句话"}',
+      '{"events":[{"title":"","date":"YYYY-MM-DD","time":"HH:mm或null","endTime":"HH:mm或null","note":"","repeat":null,"repeatUntil":null}],"missing":[],"message":"给用户的一句话"}',
     ].join("\n");
 
     const userContent = context && Object.keys(context).length > 0

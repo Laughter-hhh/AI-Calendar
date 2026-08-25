@@ -163,17 +163,48 @@ export const localParser: AIParser = {
       }
     }
 
-    // 2. 重复规则（每天/每周/每月，展开功能未来版本实现）
+    // 2. 重复规则（每天/每周X/每月X日 + 截止日期）
     let repeat: string | null = null;
-    if (/每天|每日|每晚/.test(rest)) repeat = "daily";
-    else if (/每周/.test(rest)) repeat = "weekly";
-    else if (/每月/.test(rest)) repeat = "monthly";
-    if (repeat) rest = rest.replace(/每天|每日|每晚|每周|每月/g, " ");
+    let repeatUntil: string | null = null;
+    let repeatStart: string | null = null; // 具体规则的起始日（如"每周一"的下一个周一）
 
-    // 3. 日期
+    const untilMatch = rest.match(/持续(?:到)?(\d{1,2})月(\d{1,2})[日号]?/);
+    if (untilMatch) {
+      const year = Number(todayStr().slice(0, 4));
+      repeatUntil = `${year}-${pad2(Number(untilMatch[1]))}-${pad2(Number(untilMatch[2]))}`;
+      rest = rest.replace(untilMatch[0], " ");
+    }
+
+    if (/每天|每日|每晚/.test(rest)) {
+      repeat = "daily";
+      rest = rest.replace(/每天|每日|每晚/g, " ");
+    } else {
+      const weeklySpec = rest.match(/每(?:周|星期|礼拜)([日天一二三四五六])/);
+      const monthlySpec = rest.match(/每月(\d{1,2})[日号]/);
+      if (weeklySpec) {
+        repeat = "weekly";
+        repeatStart = nextWeekdayDate(WEEKDAY_NAME[weeklySpec[1]]);
+        rest = rest.replace(weeklySpec[0], " ");
+      } else if (monthlySpec) {
+        repeat = "monthly";
+        repeatStart = nextMonthDayDate(Number(monthlySpec[1]));
+        rest = rest.replace(monthlySpec[0], " ");
+      } else if (/每周/.test(rest)) {
+        repeat = "weekly";
+        rest = rest.replace(/每周/g, " ");
+      } else if (/每月/.test(rest)) {
+        repeat = "monthly";
+        rest = rest.replace(/每月/g, " ");
+      }
+    }
+
+    // 3. 日期（重复规则可自带起始日，如"每周一"）
     const resolvedDate = resolveDate(rest);
-    const date = context?.date ?? resolvedDate?.date ?? null;
+    const date = context?.date ?? resolvedDate?.date ?? repeatStart ?? null;
     if (resolvedDate) rest = resolvedDate.rest;
+
+    // 连续 N 天或重复规则时，默认从今天开始（隐含起始点，符合直觉）
+    const startDate = date ?? (repeatDays > 0 || repeat ? todayStr() : null);
 
     // 4. 时间
     const resolvedTime = resolveTime(rest);
@@ -186,11 +217,8 @@ export const localParser: AIParser = {
     // 6. 缺失信息检查（产品原则：信息缺失时询问，不自动猜测）
     const missing: string[] = [];
     if (!title) missing.push("title");
-    if (!date) missing.push("date");
+    if (!startDate) missing.push("date");
     if (!time) missing.push("time");
-
-    // 连续 N 天时默认从今天开始（"连续四天" 隐含起始点）
-    const startDate = date ?? (repeatDays > 0 ? todayStr() : null);
 
     let events: ParsedEvent[] = [];
     if (title && startDate && time) {
@@ -201,6 +229,7 @@ export const localParser: AIParser = {
           time,
           endTime: resolvedTime.endTime,
           repeat: repeatDays > 0 ? null : repeat,
+          repeatUntil: repeatDays > 0 ? null : repeatUntil,
           note: undefined,
         });
       }
@@ -212,14 +241,35 @@ export const localParser: AIParser = {
       message = `还差一点信息：${missing.map((k) => names[k]).join("、")}。请告诉我。`;
     } else if (repeatDays > 0) {
       message = `已为你安排从 ${startDate} 起连续 ${repeatDays} 天的日程。`;
+    } else if (repeat) {
+      const repeatNames: Record<string, string> = { daily: "每天", weekly: "每周", monthly: "每月" };
+      message = `已为你安排${repeatNames[repeat] ?? repeat}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
     } else {
       message = "已为你安排好日程，确认后保存。";
     }
 
     return Promise.resolve({
-      events: missing.length > 0 ? [{ title, date: startDate ?? "", time, repeat }] : events,
+      events: missing.length > 0 ? [{ title, date: startDate ?? "", time, repeat, repeatUntil }] : events,
       missing,
       message,
     });
   },
 };
+
+/** 下一个指定星期几（今天匹配则从今天开始） */
+function nextWeekdayDate(target: number): string {
+  const diff = (target - weekdayOf(todayStr()) + 7) % 7;
+  return addDaysStr(todayStr(), diff);
+}
+
+/** 下一个指定日期号（今天匹配则从今天开始；月末兜底） */
+function nextMonthDayDate(day: number): string {
+  const t = todayStr();
+  for (let i = 0; i < 40; i++) {
+    const d = addDaysStr(t, i);
+    const dayOfMonth = Number(d.slice(8, 10));
+    const daysInMonth = Number(new Date(Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)), 0)).getUTCDate());
+    if (dayOfMonth === day || (day > 28 && dayOfMonth === daysInMonth)) return d;
+  }
+  return t;
+}

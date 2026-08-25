@@ -61,11 +61,11 @@ async function main() {
 
   if (failures.length === 0) {
     console.log("\n🎉 页面渲染检查全部通过");
-    process.exit(0);
   } else {
     console.log(`\n❌ 失败 ${failures.length} 项：${failures.join("、")}`);
-    process.exit(1);
   }
+  await new Promise((r) => setTimeout(r, 300));
+  process.exit(failures.length === 0 ? 0 : 1);
 }
 
 main().catch((err) => {

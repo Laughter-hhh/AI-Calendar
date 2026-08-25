@@ -37,9 +37,16 @@ export default function EventList({
     }
   }
 
-  async function remove(id: number) {
-    if (!window.confirm("确定删除这个日程吗？")) return;
-    await fetch(`/api/events/${id}`, { method: "DELETE" });
+  async function removeSeries(ev: CalendarEvent) {
+    const tip = ev.repeat ? "这会把整个重复系列都删除，确定吗？" : "确定删除这个日程吗？";
+    if (!window.confirm(tip)) return;
+    await fetch(`/api/events/${ev.id}`, { method: "DELETE" });
+    await refresh();
+  }
+
+  async function removeSingle(ev: CalendarEvent) {
+    if (!window.confirm(`只删除 ${ev.date} 这一天的日程？系列其他日期保留。`)) return;
+    await fetch(`/api/events/${ev.id}?mode=single&date=${ev.date}`, { method: "DELETE" });
     await refresh();
   }
 
@@ -114,6 +121,7 @@ export default function EventList({
                       {repeatLabel(ev.repeat)}
                     </span>
                   )}
+                  {ev.repeatUntil && <span>至 {ev.repeatUntil}</span>}
                 </div>
               </div>
               <div className="flex shrink-0 gap-1">
@@ -123,12 +131,29 @@ export default function EventList({
                 >
                   编辑
                 </button>
-                <button
-                  onClick={() => remove(ev.id)}
-                  className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
-                >
-                  删除
-                </button>
+                {ev.repeat ? (
+                  <>
+                    <button
+                      onClick={() => removeSingle(ev)}
+                      className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
+                    >
+                      删此日
+                    </button>
+                    <button
+                      onClick={() => removeSeries(ev)}
+                      className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
+                    >
+                      删系列
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => removeSeries(ev)}
+                    className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
+                  >
+                    删除
+                  </button>
+                )}
               </div>
             </div>
           )}

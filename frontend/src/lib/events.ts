@@ -1,5 +1,6 @@
 // 事件数据访问层：所有 SQL 和重复规则展开都集中在这里
 import { getDb } from "./db";
+import { shiftDate } from "./date";
 
 export interface CalendarEvent {
   id: number;
@@ -104,6 +105,19 @@ export function listEvents(userId: number, date: string): CalendarEvent[] {
     if (b.startTime === null) return 1;
     return a.startTime.localeCompare(b.startTime) || a.id - b.id;
   });
+}
+
+/** 查询日期区间的日程（每天展开重复事件），用于周视图 / AI 修改日程的候选搜索 */
+export function listEventsRange(userId: number, from: string, to: string): CalendarEvent[] {
+  const out: CalendarEvent[] = [];
+  let d = from;
+  let guard = 0;
+  while (d <= to && guard < 366) {
+    out.push(...listEvents(userId, d));
+    d = shiftDate(d, 1);
+    guard += 1;
+  }
+  return out;
 }
 
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {

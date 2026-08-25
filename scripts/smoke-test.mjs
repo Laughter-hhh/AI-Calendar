@@ -170,6 +170,39 @@ async function main() {
   const r7 = await api("/api/ai/parse", { method: "POST", body: { text: "每天下午五点提醒喝水，持续到9月1日" } });
   check("AI 解析重复截止日期", r7.data?.result?.events?.[0]?.repeatUntil === `${year}-09-01`, JSON.stringify(r7.data?.result));
 
+  console.log("\n9) AI 修改/删除日程");
+  await api("/api/events", { method: "POST", body: { title: "学习 Python", date: todayStr(0), time: "20:00" } });
+  const meeting = await api("/api/events", { method: "POST", body: { title: "会议", date: todayStr(1), time: "15:00" } });
+  const meetingId = meeting.data?.event?.id;
+
+  const a1 = await api("/api/ai/action", { method: "POST", body: { text: "把学习改到晚上九点" } });
+  const ar1 = a1.data?.result;
+  check("修改意图识别", ar1?.action === "update", JSON.stringify(ar1));
+  check("目标日程正确", ar1?.event?.title === "学习 Python", ar1?.event?.title);
+  check("新时间解析为 21:00", ar1?.changes?.time === "21:00", JSON.stringify(ar1?.changes));
+  if (ar1?.action === "update" && ar1.event) {
+    const patched = await api(`/api/events/${ar1.event.id}`, { method: "PATCH", body: { time: "21:00" } });
+    check("执行修改成功", patched.status === 200 && patched.data?.event?.startTime === "21:00", JSON.stringify(patched.data));
+  }
+
+  const a2 = await api("/api/ai/action", { method: "POST", body: { text: "删除明天的会议" } });
+  const ar2 = a2.data?.result;
+  check("删除意图识别且目标正确", ar2?.action === "delete" && ar2?.event?.id === meetingId, JSON.stringify(ar2));
+  if (ar2?.action === "delete" && ar2.event) {
+    const del2 = await api(`/api/events/${ar2.event.id}`, { method: "DELETE" });
+    check("执行删除成功", del2.status === 200);
+  }
+
+  const a3 = await api("/api/ai/action", { method: "POST", body: { text: "删除不存在的瑜伽课" } });
+  check(
+    "未找到时给出提示",
+    a3.status === 200 && a3.data?.result?.action === null && String(a3.data?.result?.message).includes("没找到"),
+    JSON.stringify(a3.data?.result)
+  );
+
+  const a4 = await api("/api/ai/action", { method: "POST", body: { text: "明天下午三点开会" } });
+  check("创建意图不被误判为修改/删除", a4.data?.result?.action === null && a4.data?.result?.message === "", JSON.stringify(a4.data?.result));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

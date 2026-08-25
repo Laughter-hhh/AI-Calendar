@@ -40,7 +40,7 @@ function cnToNumber(s: string): number | null {
 }
 
 /** 解析日期表达，返回 { date, 去掉日期词后的剩余文本 } */
-function resolveDate(text: string): { date: string; rest: string } | null {
+export function resolveDate(text: string): { date: string; rest: string } | null {
   let rest = text;
 
   // 同时吞掉 "从…开始" 这类前缀：从今天开始 → 今天
@@ -76,7 +76,7 @@ function resolveDate(text: string): { date: string; rest: string } | null {
 }
 
 /** 解析时间表达，返回 { time, endTime, 去掉时间词后的剩余文本 } */
-function resolveTime(text: string): { time: string | null; endTime: string | null; rest: string } {
+export function resolveTime(text: string): { time: string | null; endTime: string | null; rest: string } {
   let rest = text;
   let time: string | null = null;
   let endTime: string | null = null;

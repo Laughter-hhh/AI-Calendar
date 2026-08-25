@@ -3,20 +3,60 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParseResult } from "../../../backend/ai/types";
+import type { ActionResult } from "../../../backend/ai/action";
 
-type Status = "idle" | "parsing" | "asking" | "preview";
+type Status = "idle" | "parsing" | "asking" | "preview" | "action";
+
+function repeatLabel(r?: string | null): string {
+  if (r === "daily") return "每天";
+  if (r === "weekly") return "每周";
+  if (r === "monthly") return "每月";
+  return r ?? "";
+}
 
 export default function AiInput() {
   const router = useRouter();
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<ParseResult | null>(null);
+  const [actionResult, setActionResult] = useState<ActionResult | null>(null);
+  const [info, setInfo] = useState("");
   const [context, setContext] = useState<{ title?: string; date?: string; time?: string } | null>(null);
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
+
+  async function submit(input: string) {
+    setStatus("parsing");
+    setError("");
+    setInfo("");
+    try {
+      // 先判断是否是要"修改/删除已有日程"（如：把学习改到晚上九点 / 删除明天的会议）
+      const actionRes = await fetch("/api/ai/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input }),
+      });
+      const actionData = await actionRes.json();
+      const ar: ActionResult | undefined = actionData.result;
+      if (actionRes.ok && ar?.action) {
+        setActionResult(ar);
+        setStatus("action");
+        return;
+      }
+      if (actionRes.ok && ar?.message) {
+        // 有修改/删除意图但没找到目标，或需要用户澄清
+        setInfo(ar.message);
+        setStatus("idle");
+        return;
+      }
+    } catch {
+      // action 接口异常时直接走创建流程
+    }
+    await parse(input);
+  }
 
   async function parse(input: string) {
     setStatus("parsing");
@@ -57,6 +97,8 @@ export default function AiInput() {
     setText("");
     setReply("");
     setResult(null);
+    setActionResult(null);
+    setInfo("");
     setContext(null);
     setStatus("idle");
     setError("");
@@ -71,6 +113,26 @@ export default function AiInput() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...ev, sourceText: text }),
+        });
+      }
+      reset();
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmAction() {
+    if (!actionResult?.event) return;
+    setSaving(true);
+    try {
+      if (actionResult.action === "delete") {
+        await fetch(`/api/events/${actionResult.event.id}`, { method: "DELETE" });
+      } else if (actionResult.action === "update" && actionResult.changes) {
+        await fetch(`/api/events/${actionResult.event.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(actionResult.changes),
         });
       }
       reset();
@@ -119,6 +181,35 @@ export default function AiInput() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/90 to-transparent px-4 pb-5 pt-8">
       <div className="mx-auto w-full max-w-3xl">
+        {status === "action" && actionResult?.event && (
+          <div className="mb-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
+            <p className="text-sm">{actionResult.message}</p>
+            <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+              {actionResult.event.title} · {actionResult.event.date}
+              {actionResult.event.time ? ` ${actionResult.event.time}` : ""}
+              {actionResult.event.repeat ? ` · 重复：${repeatLabel(actionResult.event.repeat)}` : ""}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={confirmAction}
+                disabled={saving}
+                className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+              >
+                {saving ? "处理中…" : actionResult.action === "delete" ? "确认删除" : "确认修改"}
+              </button>
+              <button onClick={reset} className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100">
+                取消
+              </button>
+            </div>
+          </div>
+        )}
+
+        {info && (
+          <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+            <p className="text-sm text-blue-800">{info}</p>
+          </div>
+        )}
+
         {status === "asking" && result && (
           <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="text-sm text-amber-800">{result.message}</p>
@@ -157,7 +248,8 @@ export default function AiInput() {
             </ul>
             {result.events[0]?.repeat && (
               <p className="mt-2 text-xs text-zinc-400">
-                {result.events[0]?.repeat === "daily" ? "重复：每天（展开功能将在后续版本支持）" : ""}
+                重复：{repeatLabel(result.events[0].repeat)}
+                {result.events[0].repeatUntil ? ` · 至 ${result.events[0].repeatUntil}` : ""}
               </p>
             )}
             <div className="mt-3 flex gap-2">
@@ -190,13 +282,17 @@ export default function AiInput() {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && text.trim() && status !== "parsing" && parse(text)}
-            placeholder={status === "parsing" ? "正在理解你的话…" : "告诉 AI 你要做什么，例如：明天下午三点开会"}
+            onKeyDown={(e) => e.key === "Enter" && text.trim() && status !== "parsing" && submit(text)}
+            placeholder={
+              status === "parsing"
+                ? "正在理解你的话…"
+                : "告诉 AI 你要做什么，例如：明天下午三点开会；或：把学习改到晚上九点"
+            }
             disabled={status === "parsing"}
             className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none"
           />
           <button
-            onClick={() => text.trim() && parse(text)}
+            onClick={() => text.trim() && submit(text)}
             disabled={status === "parsing" || !text.trim()}
             className="shrink-0 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
           >

@@ -1,18 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CalendarEvent } from "@/lib/events";
+
+function repeatLabel(r: string): string {
+  if (r === "daily") return "每天";
+  if (r === "weekly") return "每周";
+  if (r === "monthly") return "每月";
+  return r;
+}
 
 export default function EventList({
   initialEvents,
   date,
+  isToday,
 }: {
   initialEvents: CalendarEvent[];
   date: string;
+  isToday: boolean;
 }) {
   const [events, setEvents] = useState(initialEvents);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState({ title: "", time: "" });
+
+  // 关键：服务端刷新后传入新的 initialEvents 时，同步本地列表
+  // （否则保存日程后列表不会更新，表现为"添加了但看不到"）
+  useEffect(() => {
+    setEvents(initialEvents);
+  }, [initialEvents]);
 
   async function refresh() {
     const res = await fetch(`/api/events?date=${date}`);
@@ -46,8 +61,8 @@ export default function EventList({
   if (events.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-8 text-center">
-        <p className="text-sm text-zinc-500">今天还没有日程</p>
-        <p className="mt-1 text-sm text-zinc-400">试试告诉 AI：“明天下午三点开会”</p>
+        <p className="text-sm text-zinc-500">{isToday ? "今天还没有日程" : "这一天还没有日程"}</p>
+        <p className="mt-1 text-sm text-zinc-400">试试告诉 AI："明天下午三点开会"</p>
       </div>
     );
   }
@@ -96,7 +111,7 @@ export default function EventList({
                   {ev.endTime && <span>至 {ev.endTime}</span>}
                   {ev.repeat && (
                     <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-500">
-                      {ev.repeat === "daily" ? "每天" : ev.repeat}
+                      {repeatLabel(ev.repeat)}
                     </span>
                   )}
                 </div>

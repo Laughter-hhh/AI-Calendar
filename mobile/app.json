@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "AI Calendar",
+    "slug": "ai-calendar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "extra": {
+      "siteUrl": "http://39.106.121.28:3000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aicalendar.app"
+    },
+    "android": {
+      "package": "com.aicalendar.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

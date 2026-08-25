@@ -4,10 +4,15 @@ import { listEvents } from "@/lib/events";
 import AuthBar from "@/components/AuthBar";
 import AuthCard from "@/components/AuthCard";
 import EventList from "@/components/EventList";
+import DateNav from "@/components/DateNav";
 import AiInput from "@/components/AiInput";
-import { todayLabel, todayStr } from "@/lib/date";
+import { dateLabel, isValidDateStr, todayStr } from "@/lib/date";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
   const store = await cookies();
   const user = getSessionUser(store.get(SESSION_COOKIE)?.value);
 
@@ -28,22 +33,27 @@ export default async function Home() {
     );
   }
 
+  const params = await searchParams;
   const today = todayStr();
-  const events = listEvents(user.id, today);
+  const selected = typeof params.date === "string" && isValidDateStr(params.date) ? params.date : today;
+  const events = listEvents(user.id, selected);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-44 pt-8">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">AI Calendar</h1>
-          <p className="mt-1 text-sm text-zinc-500">{todayLabel()}</p>
+          <p className="mt-1 text-sm text-zinc-500">{dateLabel(selected)}</p>
         </div>
         <AuthBar email={user.email} />
       </header>
 
       <section className="mt-6">
-        <h2 className="mb-3 text-lg font-semibold">今日日程</h2>
-        <EventList initialEvents={events} date={today} />
+        <h2 className="mb-3 text-lg font-semibold">
+          {selected === today ? "今日日程" : `${dateLabel(selected)} 的日程`}
+        </h2>
+        <DateNav date={selected} />
+        <EventList initialEvents={events} date={selected} isToday={selected === today} />
       </section>
 
       <AiInput />

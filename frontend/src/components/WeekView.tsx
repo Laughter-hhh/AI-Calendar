@@ -14,9 +14,11 @@ function repeatLabel(r: string | null): string {
 export default function WeekView({
   initialEvents,
   startDate,
+  query,
 }: {
   initialEvents: CalendarEvent[];
   startDate: string;
+  query: string;
 }) {
   const [events, setEvents] = useState(initialEvents);
 
@@ -48,7 +50,9 @@ export default function WeekView({
   return (
     <div className="flex flex-col gap-4">
       {days.map((day) => {
-        const dayEvents = events.filter((e) => e.date === day);
+        const dayEvents = events.filter(
+          (e) => e.date === day && (!query || e.title.toLowerCase().includes(query.toLowerCase()))
+        );
         const isToday = day === todayStr();
         return (
           <section key={day} className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">

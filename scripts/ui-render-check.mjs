@@ -60,6 +60,19 @@ async function main() {
   check("周视图页面返回 200 且含未来7天标题", weekPage.status === 200 && weekPage.text.includes("未来 7 天"), `status=${weekPage.status}`);
   check("周视图页面显示该日程", weekPage.text.includes("界面测试日程"));
 
+  const monthPage = await api(`/?date=${todayStr(0)}&view=month`);
+  check(
+    "月视图页面返回 200 且含月份标题与切换按钮",
+    monthPage.status === 200 && monthPage.text.includes("年") && monthPage.text.includes("月") && monthPage.text.includes("上月"),
+    `status=${monthPage.status}`
+  );
+  check("月视图页面显示该日程", monthPage.text.includes("界面测试日程"));
+
+  const searchPage = await api(`/?date=${tomorrow}&q=界面`);
+  check("搜索匹配时显示日程", searchPage.text.includes("界面测试日程"));
+  const searchNone = await api(`/?date=${tomorrow}&q=完全不存在的词`);
+  check("搜索无结果时显示提示", searchNone.text.includes("没有匹配的日程"));
+
   const todayPage = await api("/");
   check("今天页不显示明天的日程", !todayPage.text.includes("界面测试日程"));
 

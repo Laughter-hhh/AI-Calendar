@@ -212,6 +212,14 @@ async function main() {
   const health = await api("/api/health");
   check("健康检查包含数据库状态", health.data?.db === "ok", JSON.stringify(health.data));
 
+  console.log("\n11) ICS 导出");
+  const ics = await api(`/api/events/export?from=${todayStr(-3)}&to=${todayStr(3)}`);
+  check("ICS 导出返回 200", ics.status === 200, `status=${ics.status}`);
+  check("ICS 内容包含 VCALENDAR", ics.text.includes("BEGIN:VCALENDAR") && ics.text.includes("END:VCALENDAR"));
+  check("ICS 内容包含日程标题", ics.text.includes("学习 Python") || ics.text.includes("晨跑"));
+  const icsBad = await api("/api/events/export?from=bad&to=2026-01-01");
+  check("非法区间导出返回 400", icsBad.status === 400, `status=${icsBad.status}`);
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

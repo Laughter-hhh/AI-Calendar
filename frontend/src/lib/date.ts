@@ -23,6 +23,13 @@ export function shiftDate(dateStr: string, days: number): string {
   return shifted.toISOString().slice(0, 10);
 }
 
+/** 日期字符串加减月份（结果取该月第一天），返回 YYYY-MM-DD */
+export function shiftMonth(dateStr: string, months: number): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + months, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
 /** 展示用日期标题：今天/明天/昨天，或 "8月10日 星期一" */
 export function dateLabel(dateStr: string): string {
   const today = todayStr();

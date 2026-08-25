@@ -20,8 +20,8 @@ AI Calendar 是一个 **AI 原生的个人时间管理助手**：用户用自然
 
 - **线上地址**：http://39.106.121.28:3000（阿里云 ECS，2 核 2G，Ubuntu 22.04）
 - **部署方式**：GitHub Actions 云端构建 + standalone 产物自动部署（`git push` 即上线）
-- **已完成**：注册/登录、AI 自然语言创建日程（连续 N 天）、信息追问、语音输入、按日期查看、未来 7 天视图、编辑/删除、完整重复事件（每天/每周/每月 + 截止日期 + 仅删本日）、AI 自然语言修改/删除日程、手机 App（WebView 壳）、CI 自动部署、数据库备份脚本、冒烟测试（40 项）与页面渲染测试（9 项）
-- **当前版本标签**：`v3.0.0`
+- **已完成**：注册/登录、AI 自然语言创建日程（连续 N 天）、信息追问、语音输入、单日/未来7天/月三种视图、搜索、事件详情与备注、增强编辑（日期/结束时间/备注）、完整重复事件（每天/每周/每月 + 截止日期 + 仅删本日）、AI 自然语言修改/删除日程、ICS 导出、今日下一项提示、手机 App（WebView 壳）、CI 自动部署、数据库备份脚本、冒烟测试（44 项）与页面渲染测试（13 项）
+- **当前版本标签**：`v3.1.0`
 
 ## 3. 技术栈与架构
 
@@ -140,7 +140,9 @@ AI-Calendar/
 | POST | /api/auth/login | 登录 | 公开 |
 | POST | /api/auth/logout | 退出 | 登录 |
 | GET | /api/auth/me | 当前用户 | 登录 |
-| GET | /api/events?date=YYYY-MM-DD | 查某天日程 | 登录 |
+| GET | /api/events?date=YYYY-MM-DD | 查某天日程（含重复展开） | 登录 |
+| GET | /api/events?from=&to= | 区间查询（周/月视图） | 登录 |
+| GET | /api/events/export?from=&to= | 导出 .ics（可导入 Google/Apple/Outlook） | 登录 |
 | POST | /api/events | 创建日程 | 登录 |
 | PATCH | /api/events/:id | 修改 | 登录（本人） |
 | DELETE | /api/events/:id | 删除 | 登录（本人） |

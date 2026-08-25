@@ -1,39 +1,48 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { shiftDate, todayStr } from "@/lib/date";
+import { shiftDate, shiftMonth, todayStr } from "@/lib/date";
 
-export default function DateNav({ date, view }: { date: string; view: "day" | "week" }) {
+type View = "day" | "week" | "month";
+
+export default function DateNav({ date, view }: { date: string; view: View }) {
   const router = useRouter();
 
-  function go(target: string, targetView: "day" | "week" = view) {
+  function go(target: string, targetView: View = view) {
     const params = new URLSearchParams();
-    if (target !== todayStr()) params.set("date", target);
-    if (targetView === "week") params.set("view", "week");
+    if (target !== todayStr() || targetView === "month") params.set("date", target);
+    if (targetView !== "day") params.set("view", targetView);
     router.push(`/?${params.toString()}`);
   }
+
+  function shift(dateStr: string, dir: number, v: View): string {
+    return v === "month" ? shiftMonth(dateStr, dir) : shiftDate(dateStr, dir);
+  }
+
+  const prevLabel = view === "month" ? "‹ 上月" : "‹ 前一段";
+  const nextLabel = view === "month" ? "下月 ›" : "后一段 ›";
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
       <button
-        onClick={() => go(shiftDate(date, -1))}
+        onClick={() => go(shift(date, -1, view))}
         className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600 hover:bg-zinc-100"
       >
-        ‹ 前一段
+        {prevLabel}
       </button>
       <input
-        type="date"
-        value={date}
-        onChange={(e) => e.target.value && go(e.target.value)}
+        type={view === "month" ? "month" : "date"}
+        value={view === "month" ? date.slice(0, 7) : date}
+        onChange={(e) => e.target.value && go(view === "month" ? `${e.target.value}-01` : e.target.value)}
         className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-zinc-700 outline-none focus:border-zinc-400"
       />
       <button
-        onClick={() => go(shiftDate(date, 1))}
+        onClick={() => go(shift(date, 1, view))}
         className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600 hover:bg-zinc-100"
       >
-        后一段 ›
+        {nextLabel}
       </button>
-      {date !== todayStr() && (
+      {date.slice(0, 7) !== todayStr().slice(0, 7) && (
         <button
           onClick={() => go(todayStr())}
           className="rounded-lg bg-zinc-900 px-3 py-1.5 text-white hover:bg-zinc-700"
@@ -42,18 +51,19 @@ export default function DateNav({ date, view }: { date: string; view: "day" | "w
         </button>
       )}
       <span className="mx-1 h-4 w-px bg-zinc-200" />
-      <button
-        onClick={() => go(date, "day")}
-        className={`rounded-lg px-3 py-1.5 ${view === "day" ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"}`}
-      >
-        单日
-      </button>
-      <button
-        onClick={() => go(date, "week")}
-        className={`rounded-lg px-3 py-1.5 ${view === "week" ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"}`}
-      >
-        未来7天
-      </button>
+      {(["day", "week", "month"] as const).map((v) => (
+        <button
+          key={v}
+          onClick={() => go(date, v)}
+          className={`rounded-lg px-3 py-1.5 ${
+            view === v
+              ? "bg-zinc-900 text-white"
+              : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"
+          }`}
+        >
+          {v === "day" ? "单日" : v === "week" ? "未来7天" : "月"}
+        </button>
+      ))}
     </div>
   );
 }

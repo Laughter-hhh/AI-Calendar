@@ -203,6 +203,15 @@ async function main() {
   const a4 = await api("/api/ai/action", { method: "POST", body: { text: "明天下午三点开会" } });
   check("创建意图不被误判为修改/删除", a4.data?.result?.action === null && a4.data?.result?.message === "", JSON.stringify(a4.data?.result));
 
+  console.log("\n10) 区间查询与健康检查");
+  const range = await api(`/api/events?from=${todayStr(-3)}&to=${todayStr(3)}`);
+  check("区间查询返回 200", range.status === 200, `status=${range.status}`);
+  check("区间查询包含今天的事件", range.data?.events?.some((e) => e.title === "学习 Python"), JSON.stringify(range.data));
+  const badRange = await api("/api/events?from=bad&to=2026-01-01");
+  check("非法区间返回 400", badRange.status === 400, `status=${badRange.status}`);
+  const health = await api("/api/health");
+  check("健康检查包含数据库状态", health.data?.db === "ok", JSON.stringify(health.data));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

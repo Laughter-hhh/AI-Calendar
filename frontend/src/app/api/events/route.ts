@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createEvent, listEvents } from "@/lib/events";
+import { createEvent, listEvents, listEventsRange } from "@/lib/events";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { todayStr } from "@/lib/date";
 
@@ -10,6 +10,21 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
   const url = new URL(request.url);
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+  // 区间查询：GET /api/events?from=YYYY-MM-DD&to=YYYY-MM-DD（周视图等使用）
+  if (from || to) {
+    if (
+      !from ||
+      !to ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(from) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(to) ||
+      from > to
+    ) {
+      return NextResponse.json({ error: "日期区间参数不正确" }, { status: 400 });
+    }
+    return NextResponse.json({ events: listEventsRange(user.id, from, to) });
+  }
   const date = url.searchParams.get("date") ?? todayStr();
   return NextResponse.json({ events: listEvents(user.id, date) });
 }

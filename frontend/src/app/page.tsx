@@ -5,13 +5,15 @@ import AuthBar from "@/components/AuthBar";
 import AuthCard from "@/components/AuthCard";
 import EventList from "@/components/EventList";
 import DateNav from "@/components/DateNav";
+import WeekView from "@/components/WeekView";
 import AiInput from "@/components/AiInput";
-import { dateLabel, isValidDateStr, todayStr } from "@/lib/date";
+import { dateLabel, isValidDateStr, shiftDate, todayStr } from "@/lib/date";
+import { listEventsRange } from "@/lib/events";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; view?: string }>;
 }) {
   const store = await cookies();
   const user = getSessionUser(store.get(SESSION_COOKIE)?.value);
@@ -36,7 +38,8 @@ export default async function Home({
   const params = await searchParams;
   const today = todayStr();
   const selected = typeof params.date === "string" && isValidDateStr(params.date) ? params.date : today;
-  const events = listEvents(user.id, selected);
+  const view = params.view === "week" ? "week" : "day";
+  const events = view === "week" ? listEventsRange(user.id, selected, shiftDate(selected, 6)) : listEvents(user.id, selected);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-44 pt-8">
@@ -50,10 +53,18 @@ export default async function Home({
 
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-semibold">
-          {selected === today ? "今日日程" : `${dateLabel(selected)} 的日程`}
+          {view === "week"
+            ? "未来 7 天"
+            : selected === today
+              ? "今日日程"
+              : `${dateLabel(selected)} 的日程`}
         </h2>
-        <DateNav date={selected} />
-        <EventList initialEvents={events} date={selected} isToday={selected === today} />
+        <DateNav date={selected} view={view} />
+        {view === "week" ? (
+          <WeekView initialEvents={events} startDate={selected} />
+        ) : (
+          <EventList initialEvents={events} date={selected} isToday={selected === today} />
+        )}
       </section>
 
       <AiInput />

@@ -12,6 +12,12 @@ function resolveBaseDir(): string {
   return cwd.endsWith("frontend") ? path.join(cwd, "..") : cwd;
 }
 
+/** 数据库文件位置：优先用环境变量 DATABASE_PATH（服务器独立部署时指定），否则用项目内默认路径 */
+function resolveDbPath(baseDir: string): string {
+  if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH;
+  return path.join(baseDir, "database", "data", "ai-calendar.db");
+}
+
 const EMBEDDED_SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,10 +50,10 @@ export function getDb(): DatabaseSync {
   if (db) return db;
 
   const base = resolveBaseDir();
-  const dataDir = path.join(base, "database", "data");
-  fs.mkdirSync(dataDir, { recursive: true });
+  const dbPath = resolveDbPath(base);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  db = new DatabaseSync(path.join(dataDir, "ai-calendar.db"));
+  db = new DatabaseSync(dbPath);
 
   // 优先读取 database/schema.sql（单一事实来源），读不到时用内置兜底
   let schema: string;

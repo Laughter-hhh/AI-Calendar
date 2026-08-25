@@ -1,0 +1,79 @@
+name: Build & Deploy
+
+# 推送 main 分支时自动构建并部署；也可以在 Actions 页面手动触发
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm build
+
+      - name: Prepare deploy bundle
+        run: |
+          rm -rf bundle bundle.tar.gz
+          mkdir -p bundle
+          STANDALONE_DIR="$(dirname "$(find frontend/.next/standalone -name server.js | head -1)")"
+          cp -r "$STANDALONE_DIR/." bundle/
+          cp -r frontend/.next/static bundle/.next/static
+          cp -r frontend/public bundle/public
+          cp ecosystem.config.cjs bundle/ecosystem.config.cjs
+          tar -czf bundle.tar.gz -C bundle .
+
+      - name: Upload to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "bundle.tar.gz"
+          target: "/opt/ai-calendar"
+
+      - name: Deploy & restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            export PATH="/usr/local/bin:$PATH"
+            mkdir -p /opt/ai-calendar/database/data
+            rm -rf /opt/ai-calendar/app
+            mkdir -p /opt/ai-calendar/app
+            tar -xzf /opt/ai-calendar/bundle.tar.gz -C /opt/ai-calendar/app
+            rm -f /opt/ai-calendar/bundle.tar.gz
+            cd /opt/ai-calendar/app
+            pm2 startOrReload ecosystem.config.cjs
+            pm2 save
+            pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+            sleep 3
+            curl -fsS http://localhost:3000/api/health || true

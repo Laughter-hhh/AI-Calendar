@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, ".."),
   },
+  // standalone：构建产物自包含运行所需依赖，便于"云端构建 + 服务器只运行"
+  output: "standalone",
 };
 
 export default nextConfig;

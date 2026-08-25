@@ -64,6 +64,8 @@ pnpm start
 
 如果选择 Google Cloud 免费服务器，见 [Google Cloud 部署指南](deploy/GCP-DEPLOYMENT.md)（含免费额度限制说明和防扣费要点）。
 
+如果服务器配置较低、不想在服务器上构建，可使用 **GitHub Actions 云端构建 + 自动部署**（零成本，`git push` 即自动更新），见 [CI 部署指南](deploy/CI-DEPLOYMENT.md)。
+
 ### 服务器怎么选（按测试用户所在地）
 
 | 你的情况 | 推荐 |

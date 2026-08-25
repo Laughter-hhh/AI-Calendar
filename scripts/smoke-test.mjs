@@ -220,6 +220,22 @@ async function main() {
   const icsBad = await api("/api/events/export?from=bad&to=2026-01-01");
   check("非法区间导出返回 400", icsBad.status === 400, `status=${icsBad.status}`);
 
+  console.log("\n12) ICS 导入与事件颜色");
+  const imp = await api("/api/events/import", { method: "POST", body: { content: ics.text } });
+  check("ICS 导入成功（往返）", imp.status === 200 && imp.data?.imported >= 1, JSON.stringify(imp.data));
+  const afterImport = await api(`/api/events?date=${todayStr(0)}`);
+  check("导入后当天能查到日程", afterImport.data?.events?.length >= 1);
+  const impEmpty = await api("/api/events/import", { method: "POST", body: { content: "" } });
+  check("空内容导入返回 400", impEmpty.status === 400, `status=${impEmpty.status}`);
+
+  const colored = await api("/api/events", {
+    method: "POST",
+    body: { title: "蓝色会议", date: todayStr(1), time: "10:00", color: "blue" },
+  });
+  check("创建带颜色事件", colored.status === 201 && colored.data?.event?.color === "blue", JSON.stringify(colored.data));
+  const patchedColor = await api(`/api/events/${colored.data?.event?.id}`, { method: "PATCH", body: { color: "red" } });
+  check("修改事件颜色", patchedColor.status === 200 && patchedColor.data?.event?.color === "red", JSON.stringify(patchedColor.data));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

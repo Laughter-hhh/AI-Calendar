@@ -56,6 +56,14 @@
 
 `GET /api/events?from=YYYY-MM-DD&to=YYYY-MM-DD` → 区间内每天展开重复后的全部事件（每个日期一条）
 
+### 导出 .ics
+
+`GET /api/events/export?from=YYYY-MM-DD&to=YYYY-MM-DD` → 返回 `text/calendar` 的 .ics 文件（可导入 Google Calendar / Apple 日历 / Outlook）。重复事件带 RRULE 与 EXDATE。
+
+### 导入 .ics
+
+`POST /api/events/import`，body：`{ "content": "<ics 文本>" }` → `{ "imported": n, "failed": m, "skipped": k }`。单次上限 200 条。
+
 ### 创建
 
 `POST /api/events`

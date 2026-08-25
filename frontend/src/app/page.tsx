@@ -10,6 +10,7 @@ import MonthView from "@/components/MonthView";
 import DateNav from "@/components/DateNav";
 import SearchBar from "@/components/SearchBar";
 import ExportButton from "@/components/ExportButton";
+import ImportButton from "@/components/ImportButton";
 import AiInput from "@/components/AiInput";
 import { dateLabel, isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 
@@ -102,7 +103,10 @@ export default async function Home({
         <h2 className="mb-3 text-lg font-semibold">{sectionTitle}</h2>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <DateNav date={selected} view={view} />
-          <ExportButton from={exportFrom} to={exportTo} />
+          <div className="flex items-center gap-2">
+            <ExportButton from={exportFrom} to={exportTo} />
+            <ImportButton />
+          </div>
         </div>
         <SearchBar query={query} />
 

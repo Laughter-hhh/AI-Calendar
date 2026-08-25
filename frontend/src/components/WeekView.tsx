@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CalendarEvent } from "@/lib/events";
 import { dateLabel, shiftDate, todayStr } from "@/lib/date";
+import { colorDot } from "@/lib/colors";
 
 function repeatLabel(r: string | null): string {
   if (r === "daily") return "每天";
@@ -67,6 +68,7 @@ export default function WeekView({
                 {dayEvents.map((ev) => (
                   <li key={`${ev.id}-${day}`} className="flex items-center gap-2 text-sm">
                     <span className="w-12 shrink-0 text-zinc-500">{ev.startTime ?? "全天"}</span>
+                    <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${colorDot(ev.color)}`} />
                     <span className="min-w-0 flex-1 truncate">{ev.title}</span>
                     {ev.repeat && <span className="text-xs text-zinc-400">{repeatLabel(ev.repeat)}</span>}
                     <button

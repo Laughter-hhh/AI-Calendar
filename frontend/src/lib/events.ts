@@ -11,6 +11,7 @@ export interface CalendarEvent {
   note: string | null;
   repeat: string | null;
   repeatUntil: string | null;
+  color: string | null;
   sourceText: string | null;
 }
 
@@ -22,6 +23,7 @@ export interface NewEvent {
   note?: string | null;
   repeat?: string | null;
   repeatUntil?: string | null;
+  color?: string | null;
   sourceText?: string | null;
 }
 
@@ -35,6 +37,7 @@ function mapRow(row: Record<string, unknown>): CalendarEvent {
     note: row.note === null ? null : String(row.note),
     repeat: row.repeat === null ? null : String(row.repeat),
     repeatUntil: row.repeat_until === null ? null : String(row.repeat_until),
+    color: row.color === null ? null : String(row.color),
     sourceText: row.source_text === null ? null : String(row.source_text),
   };
 }
@@ -123,8 +126,8 @@ export function listEventsRange(userId: number, from: string, to: string): Calen
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {
   const info = getDb()
     .prepare(
-      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, source_text)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, source_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       userId,
@@ -135,6 +138,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
       data.note ?? null,
       data.repeat ?? null,
       data.repeatUntil ?? null,
+      data.color ?? null,
       data.sourceText ?? null
     );
   return {
@@ -146,6 +150,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
     note: data.note ?? null,
     repeat: data.repeat ?? null,
     repeatUntil: data.repeatUntil ?? null,
+    color: data.color ?? null,
     sourceText: data.sourceText ?? null,
   };
 }
@@ -169,12 +174,13 @@ export function updateEvent(
     note: data.note !== undefined ? data.note : (existing.note as string | null),
     repeat: data.repeat !== undefined ? data.repeat : (existing.repeat as string | null),
     repeatUntil: data.repeatUntil !== undefined ? data.repeatUntil : (existing.repeat_until as string | null),
+    color: data.color !== undefined ? data.color : (existing.color as string | null),
     sourceText: data.sourceText !== undefined ? data.sourceText : (existing.source_text as string | null),
   };
 
   db.prepare(
     `UPDATE events
-     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, source_text = ?
+     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, color = ?, source_text = ?
      WHERE id = ? AND user_id = ?`
   ).run(
     merged.title,
@@ -184,6 +190,7 @@ export function updateEvent(
     merged.note,
     merged.repeat,
     merged.repeatUntil,
+    merged.color,
     merged.sourceText,
     eventId,
     userId

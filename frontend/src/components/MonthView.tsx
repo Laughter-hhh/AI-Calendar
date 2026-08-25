@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CalendarEvent } from "@/lib/events";
 import { shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { colorDot } from "@/lib/colors";
 
 function monthStartOf(dateStr: string): string {
   return `${dateStr.slice(0, 7)}-01`;
@@ -118,6 +119,7 @@ export default function MonthView({
               </span>
               {dayEvents.slice(0, 3).map((ev) => (
                 <span key={`${ev.id}-${day}`} className="truncate rounded bg-zinc-100 px-1 py-0.5 text-[11px] text-zinc-600">
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${colorDot(ev.color)}`} />{" "}
                   {ev.startTime ? `${ev.startTime} ${ev.title}` : `全天 ${ev.title}`}
                 </span>
               ))}

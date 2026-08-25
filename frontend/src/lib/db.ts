@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS events (
   note        TEXT,
   repeat      TEXT,
   repeat_until TEXT,
+  color       TEXT,
   source_text TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -57,6 +58,9 @@ function ensureEventsColumns(db: DatabaseSync): void {
   const cols = db.prepare("PRAGMA table_info(events)").all() as Array<{ name: string }>;
   if (!cols.some((c) => c.name === "repeat_until")) {
     db.exec("ALTER TABLE events ADD COLUMN repeat_until TEXT");
+  }
+  if (!cols.some((c) => c.name === "color")) {
+    db.exec("ALTER TABLE events ADD COLUMN color TEXT");
   }
 }
 

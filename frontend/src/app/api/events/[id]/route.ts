@@ -26,6 +26,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       body.repeatUntil !== undefined
         ? (typeof body.repeatUntil === "string" && body.repeatUntil ? body.repeatUntil : null)
         : undefined,
+    color: body.color !== undefined ? (typeof body.color === "string" && body.color ? body.color : null) : undefined,
   });
 
   if (!event) return NextResponse.json({ error: "事件不存在" }, { status: 404 });

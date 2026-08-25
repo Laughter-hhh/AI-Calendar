@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CalendarEvent } from "@/lib/events";
+import { EVENT_COLORS, colorDot } from "@/lib/colors";
 
 function repeatLabel(r: string): string {
   if (r === "daily") return "每天";
@@ -16,6 +17,7 @@ interface Draft {
   time: string;
   endTime: string;
   note: string;
+  color: string;
 }
 
 export default function EventList({
@@ -32,7 +34,7 @@ export default function EventList({
   const [events, setEvents] = useState(initialEvents);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<Draft>({ title: "", date: "", time: "", endTime: "", note: "" });
+  const [draft, setDraft] = useState<Draft>({ title: "", date: "", time: "", endTime: "", note: "", color: "" });
 
   // 关键：服务端刷新后传入新的 initialEvents 时，同步本地列表
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function EventList({
       time: ev.startTime ?? "",
       endTime: ev.endTime ?? "",
       note: ev.note ?? "",
+      color: ev.color ?? "",
     });
   }
 
@@ -86,6 +89,7 @@ export default function EventList({
         time: draft.time || null,
         endTime: draft.endTime || null,
         note: draft.note || null,
+        color: draft.color || null,
       }),
     });
     setEditingId(null);
@@ -145,6 +149,17 @@ export default function EventList({
                 placeholder="备注（可选）"
                 className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm outline-none focus:border-zinc-400"
               />
+              <select
+                value={draft.color}
+                onChange={(e) => setDraft({ ...draft, color: e.target.value })}
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-zinc-400"
+              >
+                {EVENT_COLORS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    颜色：{c.label}
+                  </option>
+                ))}
+              </select>
               <div className="flex gap-2">
                 <button
                   onClick={() => saveEdit(ev.id)}
@@ -171,7 +186,10 @@ export default function EventList({
                     {ev.startTime ?? "全天"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{ev.title}</p>
+                    <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${colorDot(ev.color)}`} />
+                      <span className="truncate">{ev.title}</span>
+                    </p>
                     {ev.note && (
                       <p className="mt-0.5 truncate text-xs text-zinc-400">{ev.note}</p>
                     )}

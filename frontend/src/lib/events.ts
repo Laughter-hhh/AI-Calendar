@@ -14,6 +14,8 @@ export interface CalendarEvent {
   color: string | null;
   done: boolean;
   sourceText: string | null;
+  /** 共享来源：他人共享的事件带对方邮箱，本人事件为 null */
+  ownerEmail?: string | null;
 }
 
 export interface NewEvent {
@@ -67,10 +69,8 @@ export function occursOn(baseDate: string, repeat: string, target: string): bool
   return false;
 }
 
-/** 查询某天的日程（含重复事件展开与例外日排除） */
-export function listEvents(userId: number, date: string): CalendarEvent[] {
-  const db = getDb();
-
+/** 单个用户在某天的日程（含重复事件展开与例外日排除） */
+function eventsForOwnerOnDate(db: ReturnType<typeof getDb>, ownerId: number, date: string): CalendarEvent[] {
   // 该日的例外事件 id（用户在这天取消了某个重复事件）
   const exceptions = new Set<number>(
     (db.prepare("SELECT event_id FROM event_exceptions WHERE date = ?").all(date) as Array<{ event_id: number }>).map(
@@ -80,13 +80,13 @@ export function listEvents(userId: number, date: string): CalendarEvent[] {
 
   const direct = db
     .prepare("SELECT * FROM events WHERE user_id = ? AND event_date = ?")
-    .all(userId, date) as unknown as Record<string, unknown>[];
+    .all(ownerId, date) as unknown as Record<string, unknown>[];
   const recurring = db
     .prepare(
       `SELECT * FROM events
        WHERE user_id = ? AND event_date <= ? AND repeat IS NOT NULL`
     )
-    .all(userId, date) as unknown as Record<string, unknown>[];
+    .all(ownerId, date) as unknown as Record<string, unknown>[];
 
   const byId = new Map<number, CalendarEvent>();
 
@@ -111,6 +111,39 @@ export function listEvents(userId: number, date: string): CalendarEvent[] {
     if (b.startTime === null) return 1;
     return a.startTime.localeCompare(b.startTime) || a.id - b.id;
   });
+}
+
+/** 查询某天的日程（本人 + 共享给我的日历），含重复事件展开与例外日排除 */
+export function listEvents(userId: number, date: string): CalendarEvent[] {
+  const db = getDb();
+  const owners = getSharedOwners(db, userId);
+  const out: CalendarEvent[] = [];
+  for (const owner of owners) {
+    for (const ev of eventsForOwnerOnDate(db, owner.id, date)) {
+      out.push({ ...ev, ownerEmail: owner.email });
+    }
+  }
+  return out.sort((a, b) => {
+    if (a.startTime === null && b.startTime === null) return a.id - b.id;
+    if (a.startTime === null) return -1;
+    if (b.startTime === null) return 1;
+    return a.startTime.localeCompare(b.startTime) || a.id - b.id;
+  });
+}
+
+/** 需要展示的日历所有者列表：本人 + 共享给我的用户 */
+function getSharedOwners(db: ReturnType<typeof getDb>, userId: number): Array<{ id: number; email: string | null }> {
+  const rows = db
+    .prepare(
+      `SELECT u.id, u.email FROM calendar_shares s
+       JOIN users u ON u.id = s.owner_user_id
+       WHERE s.viewer_user_id = ?`
+    )
+    .all(userId) as unknown as Array<{ id: number | bigint; email: string }>;
+  return [
+    { id: userId, email: null },
+    ...rows.map((r) => ({ id: Number(r.id), email: String(r.email) })),
+  ];
 }
 
 /** 查询日期区间的日程（每天展开重复事件），用于周视图 / AI 修改日程的候选搜索 */

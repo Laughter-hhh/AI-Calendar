@@ -52,6 +52,12 @@ CREATE TABLE IF NOT EXISTS event_exceptions (
   date     TEXT NOT NULL,
   PRIMARY KEY (event_id, date)
 );
+CREATE TABLE IF NOT EXISTS calendar_shares (
+  owner_user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  viewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (owner_user_id, viewer_user_id)
+);
 `;
 
 /** 兼容旧数据库：给已存在的 events 表补上新增的列 */

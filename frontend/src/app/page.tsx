@@ -125,7 +125,10 @@ export default async function Home({
         )}
       </section>
 
-      <footer className="mt-10 text-center text-xs text-zinc-400">
+      <footer className="mt-10 flex justify-center gap-4 text-center text-xs text-zinc-400">
+        <a href="/shares" className="hover:text-zinc-600">
+          🔗 共享日历
+        </a>
         <a href="/download" className="hover:text-zinc-600">
           📱 下载安卓 App
         </a>

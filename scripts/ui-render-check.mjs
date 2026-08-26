@@ -88,6 +88,9 @@ async function main() {
   check("下载页包含下载按钮与 APK 链接", downloadPage.text.includes("下载 APK 安装包") && downloadPage.text.includes("/api/download/ai-calendar.apk"));
   check("下载页包含 iPhone 使用说明", downloadPage.text.includes("iPhone") && downloadPage.text.includes("添加到主屏幕"));
   check("首页包含苹果主屏幕图标与清单", todayPage.text.includes("apple-touch-icon") && todayPage.text.includes("manifest.webmanifest"));
+  check("登录后页面包含共享日历入口", datePage.text.includes("共享日历"));
+  const sharesPage = await api("/shares");
+  check("共享页返回 200 且含共享表单", sharesPage.status === 200 && sharesPage.text.includes("共享我的日历"), `status=${sharesPage.status}`);
 
   if (failures.length === 0) {
     console.log("\n🎉 页面渲染检查全部通过");

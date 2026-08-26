@@ -41,3 +41,11 @@ CREATE TABLE IF NOT EXISTS event_exceptions (
   date     TEXT NOT NULL,
   PRIMARY KEY (event_id, date)
 );
+
+-- 日历共享：owner_user_id 把自己的日历共享给 viewer_user_id（只读）
+CREATE TABLE IF NOT EXISTS calendar_shares (
+  owner_user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  viewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (owner_user_id, viewer_user_id)
+);

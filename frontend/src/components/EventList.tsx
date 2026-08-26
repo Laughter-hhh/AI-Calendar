@@ -187,14 +187,16 @@ export default function EventList({
           ) : (
             <div>
               <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={ev.done}
-                  onChange={() => toggleDone(ev)}
-                  onClick={(e) => e.stopPropagation()}
-                  title={ev.done ? "标记为未完成" : "标记为完成"}
-                  className="h-4 w-4 shrink-0 accent-zinc-900"
-                />
+                {!ev.ownerEmail && (
+                  <input
+                    type="checkbox"
+                    checked={ev.done}
+                    onChange={() => toggleDone(ev)}
+                    onClick={(e) => e.stopPropagation()}
+                    title={ev.done ? "标记为未完成" : "标记为完成"}
+                    className="h-4 w-4 shrink-0 accent-zinc-900"
+                  />
+                )}
                 <button
                   onClick={() => setDetailId(detailId === ev.id ? null : ev.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -218,40 +220,47 @@ export default function EventList({
                         </span>
                       )}
                       {ev.repeatUntil && <span>至 {ev.repeatUntil}</span>}
+                      {ev.ownerEmail && (
+                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-500">
+                          来自 {ev.ownerEmail}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </button>
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    onClick={() => startEdit(ev)}
-                    className="rounded-md px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100"
-                  >
-                    编辑
-                  </button>
-                  {ev.repeat ? (
-                    <>
-                      <button
-                        onClick={() => removeSingle(ev)}
-                        className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
-                      >
-                        删此日
-                      </button>
+                {!ev.ownerEmail && (
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      onClick={() => startEdit(ev)}
+                      className="rounded-md px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100"
+                    >
+                      编辑
+                    </button>
+                    {ev.repeat ? (
+                      <>
+                        <button
+                          onClick={() => removeSingle(ev)}
+                          className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
+                        >
+                          删此日
+                        </button>
+                        <button
+                          onClick={() => removeSeries(ev)}
+                          className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
+                        >
+                          删系列
+                        </button>
+                      </>
+                    ) : (
                       <button
                         onClick={() => removeSeries(ev)}
                         className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
                       >
-                        删系列
+                        删除
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => removeSeries(ev)}
-                      className="rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50"
-                    >
-                      删除
-                    </button>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {detailId === ev.id && (
@@ -264,6 +273,7 @@ export default function EventList({
                   </p>
                   {ev.repeat && <p>重复：{repeatLabel(ev.repeat)}{ev.repeatUntil ? `，至 ${ev.repeatUntil}` : ""}</p>}
                   {ev.note && <p>备注：{ev.note}</p>}
+                  {ev.ownerEmail && <p>来源：{ev.ownerEmail} 共享（只读）</p>}
                   {ev.sourceText && <p className="text-zinc-400">原始说法：{ev.sourceText}</p>}
                 </div>
               )}

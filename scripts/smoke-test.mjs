@@ -27,10 +27,11 @@ function nextMondayStr() {
   return shift(t, (1 - wd + 7) % 7);
 }
 
-async function api(path, { method = "GET", body } = {}) {
+async function api(path, { method = "GET", body, cookie: useCookie } = {}) {
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (cookie) headers.Cookie = cookie;
+  if (useCookie !== undefined) headers.Cookie = useCookie;
+  else if (cookie) headers.Cookie = cookie;
   const res = await fetch(BASE_URL + path, {
     method,
     headers,
@@ -45,7 +46,7 @@ async function api(path, { method = "GET", body } = {}) {
   }
   const setCookie = res.headers.get("set-cookie");
   if (setCookie) cookie = setCookie.split(";")[0];
-  return { status: res.status, data, text };
+  return { status: res.status, data, text, cookie: setCookie ? setCookie.split(";")[0] : undefined };
 }
 
 function check(name, cond, detail = "") {
@@ -256,6 +257,42 @@ async function main() {
     aDone.data?.result?.action === "done" && aDone.data?.result?.event?.id === taskId,
     JSON.stringify(aDone.data?.result)
   );
+
+  console.log("\n15) 共享日历");
+  const emailA = `sharea-${Date.now()}@test.local`;
+  const emailB = `shareb-${Date.now()}@test.local`;
+  const regA = await api("/api/auth/register", { method: "POST", body: { email: emailA, password: "123456" } });
+  const cookieA = regA.cookie;
+  const regB = await api("/api/auth/register", { method: "POST", body: { email: emailB, password: "123456" } });
+  const cookieB = regB.cookie;
+  check("注册两个测试用户", regA.status === 200 && regB.status === 200 && !!cookieA && !!cookieB);
+
+  await api("/api/events", {
+    method: "POST",
+    body: { title: "共享测试会议", date: todayStr(1), time: "10:00" },
+    cookie: cookieA,
+  });
+  const share = await api("/api/shares", { method: "POST", body: { email: emailB }, cookie: cookieA });
+  check("A 共享日历给 B", share.status === 200, JSON.stringify(share.data));
+  const shareDup = await api("/api/shares", { method: "POST", body: { email: emailB }, cookie: cookieA });
+  check("重复共享幂等", shareDup.status === 200);
+  const shareSelf = await api("/api/shares", { method: "POST", body: { email: emailA }, cookie: cookieA });
+  check("不能共享给自己", shareSelf.status === 400, JSON.stringify(shareSelf.data));
+
+  const bList = await api(`/api/events?date=${todayStr(1)}`, { cookie: cookieB });
+  const sharedEv = bList.data?.events?.find((e) => e.title === "共享测试会议");
+  check("B 能看到 A 的共享日程", bList.status === 200 && !!sharedEv && sharedEv.ownerEmail === emailA, JSON.stringify(sharedEv));
+
+  const forbidPatch = await api(`/api/events/${sharedEv?.id}`, { method: "PATCH", body: { time: "11:00" }, cookie: cookieB });
+  check("B 不能修改共享日程", forbidPatch.status === 404, `status=${forbidPatch.status}`);
+
+  const sharesList = await api("/api/shares", { cookie: cookieA });
+  check("A 的共享列表包含 B", sharesList.data?.sharedTo?.some((s) => s.email === emailB), JSON.stringify(sharesList.data));
+
+  const revoke = await api(`/api/shares?email=${encodeURIComponent(emailB)}`, { method: "DELETE", cookie: cookieA });
+  check("A 撤销共享", revoke.status === 200, JSON.stringify(revoke.data));
+  const bList2 = await api(`/api/events?date=${todayStr(1)}`, { cookie: cookieB });
+  check("撤销后 B 看不到共享日程", !bList2.data?.events?.some((e) => e.title === "共享测试会议"));
 
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");

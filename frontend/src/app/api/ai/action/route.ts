@@ -14,14 +14,16 @@ export async function POST(request: Request) {
   if (!text) return NextResponse.json({ error: "请输入想做的事情" }, { status: 400 });
 
   const result = resolveAction(text, (from, to) =>
-    listEventsRange(user.id, from, to).map((e) => ({
-      id: e.id,
-      title: e.title,
-      date: e.date,
-      time: e.startTime,
-      repeat: e.repeat,
-      repeatUntil: e.repeatUntil,
-    }))
+    listEventsRange(user.id, from, to)
+      .filter((e) => e.ownerEmail == null) // AI 只操作自己的日程
+      .map((e) => ({
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        time: e.startTime,
+        repeat: e.repeat,
+        repeatUntil: e.repeatUntil,
+      }))
   );
   return NextResponse.json({ result });
 }

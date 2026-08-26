@@ -76,22 +76,27 @@ export default function WeekView({
               <ul className="mt-2 flex flex-col gap-1.5">
                 {dayEvents.map((ev) => (
                   <li key={`${ev.id}-${day}`} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={ev.done}
-                      onChange={() => toggleDone(ev)}
-                      className="h-3.5 w-3.5 shrink-0 accent-zinc-900"
-                    />
+                    {!ev.ownerEmail && (
+                      <input
+                        type="checkbox"
+                        checked={ev.done}
+                        onChange={() => toggleDone(ev)}
+                        className="h-3.5 w-3.5 shrink-0 accent-zinc-900"
+                      />
+                    )}
                     <span className="w-12 shrink-0 text-zinc-500">{ev.startTime ?? "全天"}</span>
                     <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${colorDot(ev.color)}`} />
                     <span className={`min-w-0 flex-1 truncate ${ev.done ? "text-zinc-400 line-through" : ""}`}>{ev.title}</span>
                     {ev.repeat && <span className="text-xs text-zinc-400">{repeatLabel(ev.repeat)}</span>}
-                    <button
-                      onClick={() => remove(ev)}
-                      className="shrink-0 rounded-md px-2 py-0.5 text-xs text-red-400 hover:bg-red-50"
-                    >
-                      删除
-                    </button>
+                    {ev.ownerEmail && <span className="text-xs text-blue-400">{ev.ownerEmail}</span>}
+                    {!ev.ownerEmail && (
+                      <button
+                        onClick={() => remove(ev)}
+                        className="shrink-0 rounded-md px-2 py-0.5 text-xs text-red-400 hover:bg-red-50"
+                      >
+                        删除
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

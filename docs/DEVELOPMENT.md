@@ -144,6 +144,9 @@ AI-Calendar/
 | GET | /api/events?from=&to= | 区间查询（周/月视图） | 登录 |
 | GET | /api/events/export?from=&to= | 导出 .ics（可导入 Google/Apple/Outlook） | 登录 |
 | POST | /api/events/import | 导入 .ics（JSON `{ content }`） | 登录 |
+| GET | /api/shares | 共享列表（我共享的 / 共享给我的） | 登录 |
+| POST | /api/shares | 共享日历给某邮箱 | 登录 |
+| DELETE | /api/shares?email= | 撤销共享 / 取消查看 | 登录 |
 | POST | /api/events | 创建日程 | 登录 |
 | PATCH | /api/events/:id | 修改 | 登录（本人） |
 | DELETE | /api/events/:id | 删除 | 登录（本人） |
@@ -199,7 +202,8 @@ pnpm test:ui             # 或 BASE_URL=... node scripts/ui-render-check.mjs
   | v3.3.0 | 2026-08-26 | 安卓独立 APK 网页直下分发、下载页/接口、商店上架成本与更新策略文档 | `v3.3.0` |
 | v3.3.1 | 2026-08-26 | 修复月视图跨月跳转失效（组件状态与 URL 单一数据源） | `v3.3.1` |
 | v3.4.0 | 2026-08-26 | iOS 构建配置与分发流程就绪（ATS、TestFlight 文档） | `v3.4.0` |
-| v3.5.0 | 2026-08-26 | 勾选完成事项（含 AI"完成XX"、月视图 ✓、ICS STATUS） | `v3.5.0` |
+  | v3.5.0 | 2026-08-26 | 勾选完成事项（含 AI"完成XX"、月视图 ✓、ICS STATUS） | `v3.5.0` |
+  | v3.6.0 | 2026-08-26 | 共享日历（只读）：共享/撤销、共享视图、权限控制 | `v3.6.0` |
 | v3.0.0 | 2026-08-25 | 未来 7 天视图、区间查询、备份脚本、API 文档、健康检查含数据库探测 | `v3.0.0` |
 
 ## 12. 待拓展与待确认（摘要）

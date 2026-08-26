@@ -127,7 +127,11 @@ export default function MonthView({
                 {Number(day.slice(8, 10))}
               </span>
               {dayEvents.slice(0, 3).map((ev) => (
-                <span key={`${ev.id}-${day}`} className="truncate rounded bg-zinc-100 px-1 py-0.5 text-[11px] text-zinc-600">
+                <span
+                  key={`${ev.id}-${day}`}
+                  className={`truncate rounded bg-zinc-100 px-1 py-0.5 text-[11px] ${ev.done ? "text-zinc-400 line-through" : "text-zinc-600"}`}
+                >
+                  {ev.done && "✓ "}
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${colorDot(ev.color)}`} />{" "}
                   {ev.startTime ? `${ev.startTime} ${ev.title}` : `全天 ${ev.title}`}
                 </span>

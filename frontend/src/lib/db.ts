@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS events (
   repeat      TEXT,
   repeat_until TEXT,
   color       TEXT,
+  done        INTEGER NOT NULL DEFAULT 0,
   source_text TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -61,6 +62,9 @@ function ensureEventsColumns(db: DatabaseSync): void {
   }
   if (!cols.some((c) => c.name === "color")) {
     db.exec("ALTER TABLE events ADD COLUMN color TEXT");
+  }
+  if (!cols.some((c) => c.name === "done")) {
+    db.exec("ALTER TABLE events ADD COLUMN done INTEGER NOT NULL DEFAULT 0");
   }
 }
 

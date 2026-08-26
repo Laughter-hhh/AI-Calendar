@@ -128,6 +128,12 @@ export default function AiInput() {
     try {
       if (actionResult.action === "delete") {
         await fetch(`/api/events/${actionResult.event.id}`, { method: "DELETE" });
+      } else if (actionResult.action === "done") {
+        await fetch(`/api/events/${actionResult.event.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ done: true }),
+        });
       } else if (actionResult.action === "update" && actionResult.changes) {
         await fetch(`/api/events/${actionResult.event.id}`, {
           method: "PATCH",
@@ -195,7 +201,13 @@ export default function AiInput() {
                 disabled={saving}
                 className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
               >
-                {saving ? "处理中…" : actionResult.action === "delete" ? "确认删除" : "确认修改"}
+                {saving
+                  ? "处理中…"
+                  : actionResult.action === "delete"
+                    ? "确认删除"
+                    : actionResult.action === "done"
+                      ? "确认完成"
+                      : "确认修改"}
               </button>
               <button onClick={reset} className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100">
                 取消

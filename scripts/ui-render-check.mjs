@@ -55,6 +55,7 @@ async function main() {
   check("日期页显示该日程标题", datePage.text.includes("界面测试日程"));
   check("日期页显示日期标题（如 明天/月日）", datePage.text.includes("的日程"));
   check("日期页包含日期切换控件", datePage.text.includes("前一段") && datePage.text.includes("后一段"));
+  check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
 
   const weekPage = await api(`/?date=${tomorrow}&view=week`);
   check("周视图页面返回 200 且含未来7天标题", weekPage.status === 200 && weekPage.text.includes("未来 7 天"), `status=${weekPage.status}`);

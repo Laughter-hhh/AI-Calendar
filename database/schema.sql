@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS events (
   repeat      TEXT,            -- 未来扩展：daily / weekly / monthly ...
   repeat_until TEXT,           -- 重复截止日期 YYYY-MM-DD（可空）
   color       TEXT,            -- 分类颜色：red/orange/green/blue/purple（可空）
+  done        INTEGER NOT NULL DEFAULT 0,  -- 是否已完成：0=否 1=是
   source_text TEXT,            -- 用户输入的原始自然语言，便于追溯和优化
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );

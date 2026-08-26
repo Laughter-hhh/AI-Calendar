@@ -85,6 +85,7 @@ export async function GET(request: Request) {
       lines.push(`DTSTART;VALUE=DATE:${fmtDate(date)}`);
     }
     if (note) lines.push(`DESCRIPTION:${esc(note)}`);
+    if (Number(row.done) === 1) lines.push("STATUS:COMPLETED");
     const rrule = rruleOf(repeat ?? "", repeatUntil);
     if (rrule) lines.push(rrule);
     if (exdates.length > 0) {

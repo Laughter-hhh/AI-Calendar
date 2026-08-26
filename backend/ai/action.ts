@@ -14,7 +14,7 @@ export interface EventLike {
 }
 
 export interface ActionResult {
-  action: "update" | "delete" | null;
+  action: "update" | "delete" | "done" | null;
   event: EventLike | null;
   changes: { date?: string; time?: string | null } | null;
   message: string;
@@ -24,7 +24,8 @@ export interface ActionResult {
 type FindEvents = (from: string, to: string) => EventLike[];
 
 const MODIFY_RE = /(改(?:到|成|为)|挪(?:到|至)|移(?:到|至)|调整(?:到|至)?|提前(?:到)?|推迟(?:到)?|延后(?:到)?|调到)/;
-const DELETE_RE = /(?:删除|删掉|取消|去掉|移除|划掉)/;
+const DELETE_RE = /(?:删除|删掉|取消|去掉|移除)/;
+const DONE_RE = /(?:完成|做完|搞定|划掉|标记完成|完成掉)/;
 const FILLERS_RE = /把|将|的|这个|那个|刚才|最近|一下|帮我|请|了/g;
 
 function cleanKeyword(s: string): string {
@@ -45,12 +46,13 @@ export function resolveAction(text: string, findEvents: FindEvents): ActionResul
   const input = text.trim();
   const isDelete = DELETE_RE.test(input);
   const modifyMatch = input.match(MODIFY_RE);
+  const isDone = !isDelete && !modifyMatch && DONE_RE.test(input);
 
-  if (!isDelete && !modifyMatch) {
+  if (!isDelete && !modifyMatch && !isDone) {
     return { action: null, event: null, changes: null, message: "", candidates: [] };
   }
 
-  const verbText = isDelete ? input.match(DELETE_RE)![0] : modifyMatch![0];
+  const verbText = isDelete ? input.match(DELETE_RE)![0] : isDone ? input.match(DONE_RE)![0] : modifyMatch![0];
   const verbIndex = input.indexOf(verbText);
   let before = input.slice(0, verbIndex);
   let after = input.slice(verbIndex + verbText.length);
@@ -58,7 +60,7 @@ export function resolveAction(text: string, findEvents: FindEvents): ActionResul
   // 1) 修改意图：解析"动词后"的新日期/时间
   let newDate: string | null = null;
   let newTime: string | null = null;
-  if (!isDelete) {
+  if (!isDelete && !isDone) {
     const t = resolveTime(after);
     if (t.time) {
       newTime = t.time;
@@ -124,6 +126,16 @@ export function resolveAction(text: string, findEvents: FindEvents): ActionResul
 
   candidates.sort((a, b) => Math.abs(daysBetween(a.date, todayStr())) - Math.abs(daysBetween(b.date, todayStr())));
   const target = candidates[0];
+
+  if (isDone) {
+    return {
+      action: "done",
+      event: target,
+      changes: null,
+      message: `将把日程「${target.title}」（${target.date}）标记为完成。`,
+      candidates: [target],
+    };
+  }
 
   if (isDelete) {
     const repeatTip = target.repeat ? "（这是重复系列，将删除整个系列）" : "";

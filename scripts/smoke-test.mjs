@@ -242,6 +242,21 @@ async function main() {
   const dlBad = await api("/api/download/..%2F..%2Fetc%2Fpasswd");
   check("路径穿越被拒绝", dlBad.status === 404, `status=${dlBad.status}`);
 
+  console.log("\n14) 完成事项");
+  const task = await api("/api/events", { method: "POST", body: { title: "整理笔记", date: todayStr(0), time: "11:00" } });
+  const taskId = task.data?.event?.id;
+  check("创建任务成功", task.status === 201 && taskId !== undefined, JSON.stringify(task.data));
+  const mark = await api(`/api/events/${taskId}`, { method: "PATCH", body: { done: true } });
+  check("标记完成成功", mark.status === 200 && mark.data?.event?.done === true, JSON.stringify(mark.data));
+  const listAfter = await api(`/api/events?date=${todayStr(0)}`);
+  check("列表返回完成状态", listAfter.data?.events?.find((e) => e.id === taskId)?.done === true);
+  const aDone = await api("/api/ai/action", { method: "POST", body: { text: "完成整理" } });
+  check(
+    "AI 识别完成意图",
+    aDone.data?.result?.action === "done" && aDone.data?.result?.event?.id === taskId,
+    JSON.stringify(aDone.data?.result)
+  );
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

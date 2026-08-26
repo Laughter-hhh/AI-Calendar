@@ -66,6 +66,15 @@ export default function EventList({
     await refresh();
   }
 
+  async function toggleDone(ev: CalendarEvent) {
+    await fetch(`/api/events/${ev.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ done: !ev.done }),
+    });
+    await refresh();
+  }
+
   function startEdit(ev: CalendarEvent) {
     setEditingId(ev.id);
     setDetailId(null);
@@ -178,20 +187,28 @@ export default function EventList({
           ) : (
             <div>
               <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={ev.done}
+                  onChange={() => toggleDone(ev)}
+                  onClick={(e) => e.stopPropagation()}
+                  title={ev.done ? "标记为未完成" : "标记为完成"}
+                  className="h-4 w-4 shrink-0 accent-zinc-900"
+                />
                 <button
                   onClick={() => setDetailId(detailId === ev.id ? null : ev.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <div className="w-14 shrink-0 text-sm font-medium text-zinc-700">
+                  <div className={`w-14 shrink-0 text-sm font-medium ${ev.done ? "text-zinc-300 line-through" : "text-zinc-700"}`}>
                     {ev.startTime ?? "全天"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                    <p className={`flex items-center gap-1.5 truncate text-sm font-medium ${ev.done ? "text-zinc-400 line-through" : ""}`}>
                       <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${colorDot(ev.color)}`} />
                       <span className="truncate">{ev.title}</span>
                     </p>
                     {ev.note && (
-                      <p className="mt-0.5 truncate text-xs text-zinc-400">{ev.note}</p>
+                      <p className={`mt-0.5 truncate text-xs ${ev.done ? "text-zinc-300 line-through" : "text-zinc-400"}`}>{ev.note}</p>
                     )}
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-400">
                       {ev.endTime && <span>至 {ev.endTime}</span>}
@@ -239,6 +256,7 @@ export default function EventList({
 
               {detailId === ev.id && (
                 <div className="mt-2 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500">
+                  <p>状态：{ev.done ? "已完成 ✅" : "未完成"}</p>
                   <p>
                     日期：{ev.date}
                     {ev.startTime ? ` ${ev.startTime}` : " 全天"}

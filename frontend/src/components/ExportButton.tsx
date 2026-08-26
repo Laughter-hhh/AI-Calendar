@@ -31,7 +31,7 @@ export default function ExportButton({ from, to }: { from: string; to: string })
       className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
       title="导出为 .ics，可导入 Google Calendar / Apple 日历 / Outlook"
     >
-      {busy ? "导出中…" : "导出 ICS"}
+      {busy ? "…" : "⇩ 导出"}
     </button>
   );
 }

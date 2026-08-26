@@ -1,69 +1,57 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { shiftDate, shiftMonth, todayStr } from "@/lib/date";
 
 type View = "day" | "week" | "month";
 
-export default function DateNav({ date, view }: { date: string; view: View }) {
-  const router = useRouter();
-
-  function go(target: string, targetView: View = view) {
-    const params = new URLSearchParams();
-    if (target !== todayStr() || targetView === "month") params.set("date", target);
-    if (targetView !== "day") params.set("view", targetView);
-    router.push(`/?${params.toString()}`);
-  }
-
+export default function DateNav({
+  date,
+  view,
+  onNavigate,
+}: {
+  date: string;
+  view: View;
+  onNavigate: (date: string, view: View) => void;
+}) {
   function shift(dateStr: string, dir: number, v: View): string {
     return v === "month" ? shiftMonth(dateStr, dir) : shiftDate(dateStr, dir);
   }
 
-  const prevLabel = view === "month" ? "‹ 上月" : "‹ 前一段";
-  const nextLabel = view === "month" ? "下月 ›" : "后一段 ›";
+  const isCurrent = view === "month" ? date.slice(0, 7) === todayStr().slice(0, 7) : date === todayStr();
+  const btn =
+    "shrink-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200";
+  const seg = (active: boolean) =>
+    active
+      ? "shrink-0 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white"
+      : "shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100";
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-      <button
-        onClick={() => go(shift(date, -1, view))}
-        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600 hover:bg-zinc-100"
-      >
-        {prevLabel}
+    <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm">
+      <button onClick={() => onNavigate(shift(date, -1, view), view)} className={btn}>
+        ‹ {view === "month" ? "上月" : "前一天"}
       </button>
       <input
         type={view === "month" ? "month" : "date"}
         value={view === "month" ? date.slice(0, 7) : date}
-        onChange={(e) => e.target.value && go(view === "month" ? `${e.target.value}-01` : e.target.value)}
-        className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-zinc-700 outline-none focus:border-zinc-400"
+        onChange={(e) => e.target.value && onNavigate(view === "month" ? `${e.target.value}-01` : e.target.value, view)}
+        className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
       />
-      <button
-        onClick={() => go(shift(date, 1, view))}
-        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-zinc-600 hover:bg-zinc-100"
-      >
-        {nextLabel}
+      <button onClick={() => onNavigate(shift(date, 1, view), view)} className={btn}>
+        {view === "month" ? "下月" : "后一天"} ›
       </button>
-      {date.slice(0, 7) !== todayStr().slice(0, 7) && (
-        <button
-          onClick={() => go(todayStr())}
-          className="rounded-lg bg-zinc-900 px-3 py-1.5 text-white hover:bg-zinc-700"
-        >
-          回到今天
+      {!isCurrent && (
+        <button onClick={() => onNavigate(todayStr(), view)} className={btn}>
+          今天
         </button>
       )}
-      <span className="mx-1 h-4 w-px bg-zinc-200" />
-      {(["day", "week", "month"] as const).map((v) => (
-        <button
-          key={v}
-          onClick={() => go(date, v)}
-          className={`rounded-lg px-3 py-1.5 ${
-            view === v
-              ? "bg-zinc-900 text-white"
-              : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"
-          }`}
-        >
-          {v === "day" ? "单日" : v === "week" ? "未来7天" : "月"}
-        </button>
-      ))}
+
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {(["day", "week", "month"] as const).map((v) => (
+          <button key={v} onClick={() => onNavigate(date, v)} className={seg(view === v)}>
+            {v === "day" ? "单日" : v === "week" ? "7天" : "月"}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

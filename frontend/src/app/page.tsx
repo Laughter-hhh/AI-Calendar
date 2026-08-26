@@ -4,31 +4,11 @@ import { listEvents, listEventsRange } from "@/lib/events";
 import type { CalendarEvent } from "@/lib/events";
 import AuthBar from "@/components/AuthBar";
 import AuthCard from "@/components/AuthCard";
-import EventList from "@/components/EventList";
-import WeekView from "@/components/WeekView";
-import MonthView from "@/components/MonthView";
-import DateNav from "@/components/DateNav";
-import SearchBar from "@/components/SearchBar";
-import ExportButton from "@/components/ExportButton";
-import ImportButton from "@/components/ImportButton";
+import ScheduleArea from "@/components/ScheduleArea";
 import AiInput from "@/components/AiInput";
-import { dateLabel, isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 
 type View = "day" | "week" | "month";
-
-function upcomingOf(events: CalendarEvent[]): CalendarEvent | null {
-  const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(11, 16);
-  return (
-    events
-      .filter((e) => e.startTime && e.startTime >= now)
-      .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0] ?? null
-  );
-}
-
-function monthTitle(dateStr: string): string {
-  const [y, m] = dateStr.split("-").map(Number);
-  return `${y}年${m}月`;
-}
 
 export default async function Home({
   searchParams,
@@ -62,70 +42,24 @@ export default async function Home({
   const query = typeof params.q === "string" ? params.q.trim() : "";
 
   let events: CalendarEvent[];
-  let exportFrom: string;
-  let exportTo: string;
   if (view === "week") {
-    exportFrom = selected;
-    exportTo = shiftDate(selected, 6);
-    events = listEventsRange(user.id, exportFrom, exportTo);
+    events = listEventsRange(user.id, selected, shiftDate(selected, 6));
   } else if (view === "month") {
-    exportFrom = shiftMonth(selected, 0);
-    exportTo = shiftDate(shiftMonth(selected, 1), -1);
-    events = listEventsRange(user.id, exportFrom, exportTo);
+    events = listEventsRange(user.id, shiftMonth(selected, 0), shiftDate(shiftMonth(selected, 1), -1));
   } else {
-    exportFrom = selected;
-    exportTo = selected;
     events = listEvents(user.id, selected);
   }
 
-  const upcoming = view === "day" && selected === today ? upcomingOf(events) : null;
-  const headerTitle = view === "month" ? monthTitle(selected) : dateLabel(selected);
-  const sectionTitle =
-    view === "month"
-      ? monthTitle(selected)
-      : view === "week"
-        ? "未来 7 天"
-        : selected === today
-          ? "今日日程"
-          : `${dateLabel(selected)} 的日程`;
-
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 pb-44 pt-8">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">AI Calendar</h1>
-          <p className="mt-1 text-sm text-zinc-500">{headerTitle}</p>
-        </div>
+    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-4">
+      <header className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold">AI Calendar</h1>
         <AuthBar email={user.email} />
       </header>
 
-      <section className="mt-6">
-        <h2 className="mb-3 text-lg font-semibold">{sectionTitle}</h2>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <DateNav date={selected} view={view} />
-          <div className="flex items-center gap-2">
-            <ExportButton from={exportFrom} to={exportTo} />
-            <ImportButton />
-          </div>
-        </div>
-        <SearchBar query={query} />
+      <ScheduleArea initialDate={selected} initialView={view} initialQuery={query} initialEvents={events} />
 
-        {upcoming && (
-          <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-            下一项：{upcoming.startTime} {upcoming.title}
-          </div>
-        )}
-
-      {view === "month" ? (
-          <MonthView initialEvents={events} startDate={selected} query={query} />
-        ) : view === "week" ? (
-          <WeekView initialEvents={events} startDate={selected} query={query} />
-        ) : (
-          <EventList initialEvents={events} date={selected} isToday={selected === today} query={query} />
-        )}
-      </section>
-
-      <footer className="mt-10 flex justify-center gap-4 text-center text-xs text-zinc-400">
+      <footer className="mt-8 flex justify-center gap-4 text-center text-xs text-zinc-400">
         <a href="/shares" className="hover:text-zinc-600">
           🔗 共享日历
         </a>

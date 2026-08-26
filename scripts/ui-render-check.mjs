@@ -54,7 +54,13 @@ async function main() {
   check("日期页返回 200", datePage.status === 200, `status=${datePage.status}`);
   check("日期页显示该日程标题", datePage.text.includes("界面测试日程"));
   check("日期页显示日期标题（如 明天/月日）", datePage.text.includes("的日程"));
-  check("日期页包含日期切换控件", datePage.text.includes("前一段") && datePage.text.includes("后一段"));
+  check(
+    "日期页包含紧凑切换与视图控件",
+    datePage.text.includes("前一天") &&
+      datePage.text.includes("后一天") &&
+      datePage.text.includes("单日") &&
+      datePage.text.includes("7天")
+  );
   check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
 
   const weekPage = await api(`/?date=${tomorrow}&view=week`);
@@ -82,7 +88,7 @@ async function main() {
 
   const todayPage = await api("/");
   check("今天页不显示明天的日程", !todayPage.text.includes("界面测试日程"));
-  check("页面包含导入/导出按钮", todayPage.text.includes("导出 ICS") && todayPage.text.includes("导入 ICS"));
+  check("页面包含导入/导出按钮", todayPage.text.includes("导出") && todayPage.text.includes("导入"));
   await api("/api/events", { method: "POST", body: { title: "全天待办备忘", date: tomorrow } });
   const todoPage = await api(`/?date=${tomorrow}`);
   check("每日日程分为定时与待办两段", todoPage.text.includes("定时日程") && todoPage.text.includes("待办事项"));

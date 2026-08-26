@@ -1,31 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-export default function SearchBar({ query }: { query: string }) {
-  const router = useRouter();
+export default function SearchBar({
+  query,
+  onSearch,
+}: {
+  query: string;
+  onSearch: (q: string) => void;
+}) {
   const [value, setValue] = useState(query);
 
-  function apply(q: string) {
-    const params = new URLSearchParams(window.location.search);
-    if (q) params.set("q", q);
-    else params.delete("q");
-    router.push(`/?${params.toString()}`);
-  }
-
   return (
-    <div className="mb-3 flex items-center gap-2 text-sm">
+    <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && apply(value.trim())}
+        onKeyDown={(e) => e.key === "Enter" && onSearch(value.trim())}
         placeholder="搜索日程标题…"
-        className="w-full max-w-xs rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-zinc-700 outline-none focus:border-zinc-400"
+        className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-400"
       />
       <button
-        onClick={() => apply(value.trim())}
-        className="rounded-lg bg-zinc-900 px-3 py-1.5 text-white hover:bg-zinc-700"
+        onClick={() => onSearch(value.trim())}
+        className="shrink-0 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs text-white hover:bg-zinc-700"
       >
         搜索
       </button>
@@ -33,9 +30,9 @@ export default function SearchBar({ query }: { query: string }) {
         <button
           onClick={() => {
             setValue("");
-            apply("");
+            onSearch("");
           }}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-zinc-500 hover:bg-zinc-100"
+          className="shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100"
         >
           清除
         </button>

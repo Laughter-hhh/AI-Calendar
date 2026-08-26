@@ -61,8 +61,8 @@
 
 ### B8. 应用分发与商店（部分完成）
 
-- 现状（v3.3.0）：网页直下 APK（绕过 Expo Go）；EAS 构建配置（preview=APK / production=AAB）；下载页与下载接口；上架成本与更新策略文档
-- 待做：正式图标/启动图；隐私政策页；注销账号入口；Google Play 与国内商店上架（依赖软著、HTTPS 等，见 APP-STORE.md）
+- 现状（v3.3.0 / v3.4.0）：网页直下 APK；EAS 构建配置（preview=APK / production=AAB）；下载页与下载接口；**iOS 构建配置就绪**（ATS、bundle id、TestFlight 流程文档）；上架成本与更新策略文档
+- 待做：正式图标/启动图；隐私政策页；注销账号入口；Google Play 与国内商店上架（依赖软著、HTTPS 等）；iOS 真机构建（依赖 Apple 开发者账号 $99/年，见 APP-STORE.md）
 
 ## C. 已完成功能的历史（详见 docs/versions/）
 
@@ -73,3 +73,4 @@
 - v3.1.0：月视图、事件详情与备注、增强编辑、搜索、ICS 导出、今日下一项提示
 - v3.2.0：ICS 导入、事件颜色分类
 - v3.3.0：安卓独立 APK（绕过 Expo Go）+ 网页直下分发 + 商店上架成本/更新策略文档
+- v3.4.0：iOS 构建配置与分发流程就绪（ATS、TestFlight 文档、商店策略）

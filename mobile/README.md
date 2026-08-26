@@ -58,6 +58,27 @@ npx eas-cli build -p android --profile production
 
 生产构建产出 AAB 文件，用于上传 Google Play。
 
+## iOS 打包与分发
+
+**硬性前提：需要 Apple 开发者账号（$99/年）**。没有账号就无法在真机安装 iOS 应用（苹果不允许随意侧载）。
+
+构建不需要 Mac（EAS 在云端 macOS 上构建）：
+
+```bash
+cd mobile
+npx eas-cli build -p ios --profile preview     # 云构建，产出 .ipa
+```
+
+分发方式：
+
+- **TestFlight**（推荐测试）：构建后 `npx eas-cli submit -p ios --profile preview` 上传到 TestFlight，添加测试者邮箱即可安装（内部测试 100 人、外部测试最多 10000 人）
+- **App Store 正式上架**：`npx eas-cli build -p ios --profile production` + `eas submit`，走苹果审核
+- **本机模拟器**：需要一台 Mac + Xcode
+
+> ATS 已配置允许 http（`NSAllowsArbitraryLoads`），测试期可加载当前 http 网站；**上架 App Store 前必须升级 HTTPS 并移除该配置**（苹果审核对明文流量不友好）。
+
+> ⚠️ 风险提示：苹果对"纯网页套壳"应用审核严格（4.2 最低功能要求），WebView 壳上架可能被拒。建议 iOS 版增加原生能力，或先用 Android + 网页版。
+
 ### 方式 C：本机打包
 
 安装 Android Studio + JDK + Android SDK 后，`npm run android` 可以直接跑到模拟器或真机；`npx expo run:android --variant release` 可生成本地 release APK。

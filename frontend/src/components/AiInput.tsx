@@ -27,6 +27,7 @@ export default function AiInput() {
   const [saving, setSaving] = useState(false);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const mediaRecorderRef = useRef<{ stop: () => void } | null>(null);
 
   async function submit(input: string) {
     setStatus("parsing");
@@ -153,7 +154,12 @@ export default function AiInput() {
       (window as unknown as { SpeechRecognition?: new () => unknown }).SpeechRecognition ??
       (window as unknown as { webkitSpeechRecognition?: new () => unknown }).webkitSpeechRecognition;
     if (!SR) {
-      setError("当前浏览器不支持语音输入，推荐使用 Chrome 或 Edge");
+      // 手机等不支持浏览器语音的环境：录音上传识别
+      if (listening) {
+        mediaRecorderRef.current?.stop();
+        return;
+      }
+      startRecording();
       return;
     }
     if (listening) {
@@ -182,6 +188,50 @@ export default function AiInput() {
     recognitionRef.current = rec;
     rec.start();
     setListening(true);
+  }
+
+  async function startRecording() {
+    setError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setListening(false);
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        await uploadAudio(blob);
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setListening(true);
+    } catch {
+      setError("无法使用麦克风，请检查权限或改用文字输入");
+    }
+  }
+
+  async function uploadAudio(blob: Blob) {
+    setStatus("parsing");
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("audio", blob, "recording.webm");
+      const res = await fetch("/api/ai/stt", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "语音识别失败");
+        setStatus("idle");
+        return;
+      }
+      setText((prev) => (prev ? `${prev}${data.text}` : data.text));
+      setStatus("idle");
+    } catch {
+      setError("网络错误，语音识别失败");
+      setStatus("idle");
+    }
   }
 
   return (

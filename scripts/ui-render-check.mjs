@@ -83,6 +83,9 @@ async function main() {
   const todayPage = await api("/");
   check("今天页不显示明天的日程", !todayPage.text.includes("界面测试日程"));
   check("页面包含导入/导出按钮", todayPage.text.includes("导出 ICS") && todayPage.text.includes("导入 ICS"));
+  await api("/api/events", { method: "POST", body: { title: "全天待办备忘", date: tomorrow } });
+  const todoPage = await api(`/?date=${tomorrow}`);
+  check("每日日程分为定时与待办两段", todoPage.text.includes("定时日程") && todoPage.text.includes("待办事项"));
   const downloadPage = await api("/download");
   check("下载页返回 200", downloadPage.status === 200, `status=${downloadPage.status}`);
   check("下载页包含下载按钮与 APK 链接", downloadPage.text.includes("下载 APK 安装包") && downloadPage.text.includes("/api/download/ai-calendar.apk"));

@@ -152,6 +152,8 @@ AI-Calendar/
 | DELETE | /api/events/:id | 删除 | 登录（本人） |
 | POST | /api/ai/parse | 自然语言解析（创建日程） | 登录 |
 | POST | /api/ai/action | 自然语言修改/删除日程 | 登录 |
+| POST | /api/ai/stt | 语音转文字（录音上传，需配置 Key） | 登录 |
+| GET | /api/version | 当前版本号（自动更新检测） | 公开 |
 | GET | /api/health | 健康检查 | 公开 |
 
 ## 8. AI 解析规则（本地解析器行为）
@@ -204,6 +206,7 @@ pnpm test:ui             # 或 BASE_URL=... node scripts/ui-render-check.mjs
 | v3.4.0 | 2026-08-26 | iOS 构建配置与分发流程就绪（ATS、TestFlight 文档） | `v3.4.0` |
   | v3.5.0 | 2026-08-26 | 勾选完成事项（含 AI"完成XX"、月视图 ✓、ICS STATUS） | `v3.5.0` |
   | v3.6.0 | 2026-08-26 | 共享日历（只读）：共享/撤销、共享视图、权限控制 | `v3.6.0` |
+  | v3.7.0 | 2026-08-26 | 语音识别（手机录音上传）、自动更新提示、区间查询性能优化、定时/待办分组 | `v3.7.0` |
 | v3.0.0 | 2026-08-25 | 未来 7 天视图、区间查询、备份脚本、API 文档、健康检查含数据库探测 | `v3.0.0` |
 
 ## 12. 待拓展与待确认（摘要）
@@ -221,4 +224,5 @@ pnpm test:ui             # 或 BASE_URL=... node scripts/ui-render-check.mjs
 - 跨目录引用（frontend ↔ backend）用**相对路径**，不用 tsconfig 别名（Turbopack 与 tsc 解析基准不一致，踩过坑）
 - 数据库结构变更：同时更新 `database/schema.sql` 和 `frontend/src/lib/db.ts` 的迁移逻辑，兼容旧库
 - 每个功能里程碑：更新本文档、写 `docs/versions/vX.Y.Z.md`、打 Git 标签、推送 GitHub
+- **版本号约定**：发布新版本时同步更新 `frontend/src/lib/version.ts` 的 `APP_VERSION` 与 Git 标签号，保持一致（自动更新检测依赖它）
 - 中文界面与中文注释保持一致；面向用户的说明用中文

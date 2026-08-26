@@ -120,9 +120,10 @@ export default function EventList({
     );
   }
 
-  return (
-    <ul className="flex flex-col gap-2">
-      {visible.map((ev) => (
+  const timed = visible.filter((e) => e.startTime !== null);
+  const todos = visible.filter((e) => e.startTime === null);
+
+  const renderItem = (ev: CalendarEvent) => (
         <li key={ev.id} className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
           {editingId === ev.id ? (
             <div className="flex flex-col gap-2">
@@ -280,7 +281,22 @@ export default function EventList({
             </div>
           )}
         </li>
-      ))}
-    </ul>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      {timed.length > 0 && (
+        <section>
+          {todos.length > 0 && <h3 className="mb-2 text-xs font-semibold text-zinc-400">⏰ 定时日程</h3>}
+          <ul className="flex flex-col gap-2">{timed.map(renderItem)}</ul>
+        </section>
+      )}
+      {todos.length > 0 && (
+        <section>
+          {timed.length > 0 && <h3 className="mb-2 text-xs font-semibold text-zinc-400">☑ 待办事项</h3>}
+          <ul className="flex flex-col gap-2">{todos.map(renderItem)}</ul>
+        </section>
+      )}
+    </div>
   );
 }

@@ -294,6 +294,23 @@ async function main() {
   const bList2 = await api(`/api/events?date=${todayStr(1)}`, { cookie: cookieB });
   check("撤销后 B 看不到共享日程", !bList2.data?.events?.some((e) => e.title === "共享测试会议"));
 
+  console.log("\n16) 版本与语音接口");
+  const ver = await api("/api/version");
+  check("版本接口返回版本号", ver.status === 200 && typeof ver.data?.version === "string", JSON.stringify(ver.data));
+
+  const sttNoAuth = await fetch(`${BASE_URL}/api/ai/stt`, { method: "POST", body: "x" });
+  check("语音接口未登录返回 401", sttNoAuth.status === 401, `status=${sttNoAuth.status}`);
+  const sttNoFile = await fetch(`${BASE_URL}/api/ai/stt`, { method: "POST", headers: { Cookie: cookie }, body: "x" });
+  check("语音接口缺音频返回 400", sttNoFile.status === 400, `status=${sttNoFile.status}`);
+  const audioForm = new FormData();
+  audioForm.append("audio", new Blob([new Uint8Array([1, 2, 3])], { type: "audio/webm" }), "a.webm");
+  const sttNoKey = await fetch(`${BASE_URL}/api/ai/stt`, {
+    method: "POST",
+    headers: { Cookie: cookie },
+    body: audioForm,
+  });
+  check("未配置语音服务返回 503", sttNoKey.status === 503, `status=${sttNoKey.status}`);
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

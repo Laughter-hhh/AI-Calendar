@@ -148,15 +148,64 @@ function getSharedOwners(db: ReturnType<typeof getDb>, userId: number): Array<{ 
 
 /** 查询日期区间的日程（每天展开重复事件），用于周视图 / AI 修改日程的候选搜索 */
 export function listEventsRange(userId: number, from: string, to: string): CalendarEvent[] {
+  // 优化：不再按天循环查库，改为批量查询后内存展开（大幅减少查询次数，修复手机端卡顿）
+  const db = getDb();
+  const owners = getSharedOwners(db, userId);
   const out: CalendarEvent[] = [];
-  let d = from;
-  let guard = 0;
-  while (d <= to && guard < 366) {
-    out.push(...listEvents(userId, d));
-    d = shiftDate(d, 1);
-    guard += 1;
+
+  for (const owner of owners) {
+    const direct = db
+      .prepare(
+        `SELECT * FROM events
+         WHERE user_id = ? AND event_date BETWEEN ? AND ? AND repeat IS NULL`
+      )
+      .all(owner.id, from, to) as unknown as Record<string, unknown>[];
+    const recurring = db
+      .prepare(
+        `SELECT * FROM events
+         WHERE user_id = ? AND repeat IS NOT NULL AND event_date <= ?
+           AND (repeat_until IS NULL OR repeat_until >= ?)`
+      )
+      .all(owner.id, to, from) as unknown as Record<string, unknown>[];
+
+    const exceptions = new Set<string>(
+      (
+        db
+          .prepare("SELECT event_id, date FROM event_exceptions WHERE date BETWEEN ? AND ?")
+          .all(from, to) as unknown as Array<{ event_id: number; date: string }>
+      ).map((r) => `${Number(r.event_id)}:${r.date}`)
+    );
+
+    const seenIds = new Set<number>();
+    for (const row of direct) {
+      const ev = mapRow(row);
+      if (exceptions.has(`${ev.id}:${ev.date}`)) continue;
+      seenIds.add(ev.id);
+      out.push({ ...ev, ownerEmail: owner.email });
+    }
+    for (const row of recurring) {
+      const ev = mapRow(row);
+      if (seenIds.has(ev.id)) continue;
+      let d = from;
+      let guard = 0;
+      while (d <= to && guard < 400) {
+        if (ev.repeatUntil && d > ev.repeatUntil) break;
+        if (d >= ev.date && !exceptions.has(`${ev.id}:${d}`) && occursOn(ev.date, ev.repeat!, d)) {
+          out.push({ ...ev, date: d, ownerEmail: owner.email });
+        }
+        d = shiftDate(d, 1);
+        guard += 1;
+      }
+    }
   }
-  return out;
+
+  return out.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (a.startTime === null && b.startTime === null) return a.id - b.id;
+    if (a.startTime === null) return 1;
+    if (b.startTime === null) return -1;
+    return a.startTime.localeCompare(b.startTime) || a.id - b.id;
+  });
 }
 
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {

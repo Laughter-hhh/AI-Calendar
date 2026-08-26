@@ -147,3 +147,7 @@ pnpm test:smoke
 - **V3**：多用户、云端同步、公网部署、Google/Apple/Microsoft 登录
 
 详细规划见 [产品文档](docs/AI-Calendar-Product-Specification.md)。
+
+## 💰 成本与融资
+
+低价 AI Key、免费 AI 选项、融资时机与成本决策原则，见 [成本与融资思考](docs/COST-AND-FUNDING.md)。

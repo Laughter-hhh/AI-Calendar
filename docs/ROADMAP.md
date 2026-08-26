@@ -31,6 +31,11 @@
 - 现状补充：iPhone 可用系统键盘"听写"（苹果语音引擎）直接输入；iOS 14.5+ 浏览器语音可用
 - 待做：不依赖第三方 Key 的免费语音方案评估；识别后自动提交；**iOS 原生 App Intents（"Hey Siri 添加日程"）**——依赖原生 App 路线与苹果审核政策
 
+### B9. 成本与商业化（决策参考）
+
+- 低价 AI Key / 免费 AI / 融资时机 / 成本决策原则：见 [docs/COST-AND-FUNDING.md](COST-AND-FUNDING.md)
+- 服务器配置模板：`deploy/config.env.example`（硅基流动/智谱/DeepSeek/通义一键切换）
+
 ### B2. 周视图 / 月视图
 
 - 现状：单日 / 未来 7 天 / **月视图**（v3.0.0 / v3.1.0）；区间查询已就绪

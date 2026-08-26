@@ -7,7 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "extra": {
-      "siteUrl": "http://39.106.121.28:3000"
+      "siteUrl": "http://39.106.121.28:3000",
+      "eas": {
+        "projectId": "b57d43b1-708a-4857-888f-b0e0a26cad39"
+      }
     },
     "ios": {
       "supportsTablet": true,

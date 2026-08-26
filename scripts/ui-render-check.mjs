@@ -68,6 +68,12 @@ async function main() {
   );
   check("月视图页面显示该日程", monthPage.text.includes("界面测试日程"));
 
+  // 其他月份渲染：创建 10 月事件后，10 月月历应显示标题与该事件
+  await api("/api/events", { method: "POST", body: { title: "十月测试", date: "2026-10-05", time: "09:00" } });
+  const octPage = await api("/?date=2026-10-01&view=month");
+  check("10月月历标题正确", octPage.status === 200 && octPage.text.includes("2026年10月"), `status=${octPage.status}`);
+  check("10月月历显示该月事件", octPage.text.includes("十月测试"));
+
   const searchPage = await api(`/?date=${tomorrow}&q=界面`);
   check("搜索匹配时显示日程", searchPage.text.includes("界面测试日程"));
   const searchNone = await api(`/?date=${tomorrow}&q=完全不存在的词`);

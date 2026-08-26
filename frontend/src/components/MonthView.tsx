@@ -33,11 +33,16 @@ export default function MonthView({
   query: string;
 }) {
   const router = useRouter();
-  const [month, setMonth] = useState(monthStartOf(startDate));
+  // 单一数据源：当前月份完全由 URL 的 startDate 决定（修复"选月份跳不过去"的 bug）
+  const month = monthStartOf(startDate);
   const [events, setEvents] = useState(initialEvents);
 
   useEffect(() => {
-    const from = monthStartOf(month);
+    setEvents(initialEvents);
+  }, [initialEvents]);
+
+  useEffect(() => {
+    const from = month;
     const to = shiftDate(`${month.slice(0, 7)}-${daysInMonth(month)}`, 0);
     fetch(`/api/events?from=${from}&to=${to}`)
       .then((r) => r.json())
@@ -59,6 +64,10 @@ export default function MonthView({
     return map;
   }, [events, query]);
 
+  function goMonth(targetMonth: string) {
+    router.push(`/?date=${targetMonth}&view=month`);
+  }
+
   const total = daysInMonth(month);
   const lead = weekdayOfMonthStart(month);
   const cells: Array<string | null> = [
@@ -76,19 +85,19 @@ export default function MonthView({
         <h3 className="text-sm font-semibold">{month}</h3>
         <div className="flex gap-1 text-xs">
           <button
-            onClick={() => setMonth(shiftMonth(month, -1))}
+            onClick={() => goMonth(shiftMonth(month, -1))}
             className="rounded-md border border-zinc-200 px-2 py-1 text-zinc-600 hover:bg-zinc-100"
           >
             上月
           </button>
           <button
-            onClick={() => setMonth(monthStartOf(today))}
+            onClick={() => goMonth(monthStartOf(today))}
             className="rounded-md bg-zinc-900 px-2 py-1 text-white hover:bg-zinc-700"
           >
             今天
           </button>
           <button
-            onClick={() => setMonth(shiftMonth(month, 1))}
+            onClick={() => goMonth(shiftMonth(month, 1))}
             className="rounded-md border border-zinc-200 px-2 py-1 text-zinc-600 hover:bg-zinc-100"
           >
             下月

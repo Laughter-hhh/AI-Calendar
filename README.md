@@ -111,6 +111,25 @@ OPENAI_BASE_URL=https://api.openai.com/v1   # 可换成任意兼容服务
 OPENAI_MODEL=gpt-4o-mini
 ```
 
+### 服务器配置（推荐，手机端语音识别必须）
+
+在服务器上创建 `/opt/ai-calendar/config.env`（在应用目录之外，部署不会覆盖）：
+
+```bash
+sudo nano /opt/ai-calendar/config.env
+```
+
+填入：
+
+```
+OPENAI_API_KEY=你的密钥
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_STT_MODEL=whisper-1
+```
+
+然后重启服务：`pm2 restart ai-calendar`。配置后：AI 解析升级为模型版，**手机端语音识别也可用**（费用极低，Whisper 约 ¥0.04/分钟）。
+
 ## 🧪 测试
 
 启动服务后，在项目根目录运行：

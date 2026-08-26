@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
+import { getConfig } from "../../../../../../backend/ai/config";
 
 export async function POST(request: Request) {
   const store = await cookies();
@@ -15,16 +16,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "缺少音频文件" }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getConfig("OPENAI_API_KEY");
   if (!apiKey) {
     return NextResponse.json(
-      { error: "未配置语音识别服务（OPENAI_API_KEY）。请在服务器配置后使用，或改用桌面 Chrome/Edge 的浏览器语音。" },
+      {
+        error:
+          "手机端语音识别需要服务器配置 OPENAI_API_KEY（配置方法见 README）。也可以直接用手机输入法自带的「听写」麦克风输入文字。",
+      },
       { status: 503 }
     );
   }
 
-  const baseUrl = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1").replace(/\/+$/, "");
-  const model = process.env.OPENAI_STT_MODEL ?? "whisper-1";
+  const baseUrl = (getConfig("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/+$/, "");
+  const model = getConfig("OPENAI_STT_MODEL") ?? "whisper-1";
 
   const body = new FormData();
   body.append("file", file as Blob, "recording.webm");

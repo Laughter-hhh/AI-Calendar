@@ -108,7 +108,7 @@ export default function MonthView({
             <button
               key={day}
               onClick={() => onSelectDay(day)}
-              className={`flex min-h-[3.6rem] flex-col items-stretch gap-0.5 bg-white p-0.5 text-left align-top hover:bg-zinc-50 ${
+              className={`flex min-h-[3.6rem] flex-col items-stretch gap-0.5 bg-white p-0.5 text-left align-top hover:bg-zinc-50 md:min-h-[5.2rem] ${
                 isToday ? "bg-zinc-100" : ""
               }`}
             >
@@ -118,7 +118,7 @@ export default function MonthView({
               {dayEvents.slice(0, 2).map((ev) => (
                 <span
                   key={`${ev.id}-${day}`}
-                  className={`truncate rounded bg-zinc-100 px-0.5 py-px text-[10px] leading-3 ${
+                  className={`truncate rounded bg-zinc-100 px-0.5 py-px text-[10px] leading-3 md:text-xs ${
                     ev.done ? "text-zinc-400 line-through" : "text-zinc-600"
                   }`}
                 >

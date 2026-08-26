@@ -124,7 +124,7 @@ export default function EventList({
   const todos = visible.filter((e) => e.startTime === null);
 
   const renderItem = (ev: CalendarEvent) => (
-        <li key={ev.id} className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+        <li key={ev.id} className="rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm md:p-4">
           {editingId === ev.id ? (
             <div className="flex flex-col gap-2">
               <input
@@ -202,11 +202,11 @@ export default function EventList({
                   onClick={() => setDetailId(detailId === ev.id ? null : ev.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <div className={`w-14 shrink-0 text-sm font-medium ${ev.done ? "text-zinc-300 line-through" : "text-zinc-700"}`}>
+                  <div className={`w-12 shrink-0 text-sm font-medium md:w-16 ${ev.done ? "text-zinc-300 line-through" : "text-zinc-700"}`}>
                     {ev.startTime ?? "全天"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`flex items-center gap-1.5 truncate text-sm font-medium ${ev.done ? "text-zinc-400 line-through" : ""}`}>
+                    <p className={`flex items-center gap-1.5 truncate text-sm font-medium md:text-base ${ev.done ? "text-zinc-400 line-through" : ""}`}>
                       <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${colorDot(ev.color)}`} />
                       <span className="truncate">{ev.title}</span>
                     </p>

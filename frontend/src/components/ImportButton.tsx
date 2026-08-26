@@ -35,10 +35,15 @@ export default function ImportButton() {
       <button
         onClick={() => fileRef.current?.click()}
         disabled={busy}
-        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
+        className="shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 md:px-3 md:py-2 md:text-sm"
         title="导入 .ics 文件（Google Calendar / Apple 日历 / Outlook 导出）"
       >
-        {busy ? "…" : "⇧ 导入"}
+        {busy ? "…" : (
+          <>
+            <span className="md:hidden">⇧</span>
+            <span className="hidden md:inline">⇧ 导入 ICS</span>
+          </>
+        )}
       </button>
       <input
         ref={fileRef}

@@ -51,9 +51,12 @@ export default async function Home({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-4">
+    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-4 md:max-w-5xl md:px-8 md:pt-8">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold">AI Calendar</h1>
+        <div>
+          <h1 className="text-xl font-bold md:text-2xl">AI Calendar</h1>
+          <p className="hidden text-sm text-zinc-500 md:block">AI 时间管理助手 · 一句话安排日程</p>
+        </div>
         <AuthBar email={user.email} />
       </header>
 

@@ -121,7 +121,7 @@ export default function ScheduleArea({
 
   return (
     <section className="mt-3">
-      <h2 className="mb-2 text-lg font-semibold">{title}</h2>
+      <h2 className="mb-2 text-lg font-semibold md:mb-3 md:text-xl">{title}</h2>
       <DateNav date={date} view={view} onNavigate={navigate} />
       <div className="mb-2 flex items-center gap-1.5">
         <SearchBar query={query} onSearch={search} />

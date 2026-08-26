@@ -72,6 +72,8 @@ pnpm start
 
 已提供基于 Expo 的手机端 App（WebView 壳，先快速上线）：见 [mobile/README.md](mobile/README.md)。用 Expo Go 扫码即可在手机上预览，也可打包成安卓 APK 安装。
 
+**安卓独立安装包（无需 Expo Go）**：访问 http://39.106.121.28:3000/download 直接下载安装。商店上架的成本、审核与更新难点见 [APP-STORE.md](docs/APP-STORE.md)。
+
 ## 🌐 关于域名
 
 当前用 IP + 端口访问（http://39.106.121.28:3000），适合小范围测试。正式对外发布需要域名：**国内服务器的网站绑定域名需要 ICP 备案**（约 1~2 周），备案通过后即可用 80/443 端口 + HTTPS。域名与备案已列入 V3 公网发布计划。

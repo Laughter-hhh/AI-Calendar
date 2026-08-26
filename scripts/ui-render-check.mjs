@@ -76,6 +76,9 @@ async function main() {
   const todayPage = await api("/");
   check("今天页不显示明天的日程", !todayPage.text.includes("界面测试日程"));
   check("页面包含导入/导出按钮", todayPage.text.includes("导出 ICS") && todayPage.text.includes("导入 ICS"));
+  const downloadPage = await api("/download");
+  check("下载页返回 200", downloadPage.status === 200, `status=${downloadPage.status}`);
+  check("下载页包含下载按钮与 APK 链接", downloadPage.text.includes("下载 APK 安装包") && downloadPage.text.includes("/api/download/ai-calendar.apk"));
 
   if (failures.length === 0) {
     console.log("\n🎉 页面渲染检查全部通过");

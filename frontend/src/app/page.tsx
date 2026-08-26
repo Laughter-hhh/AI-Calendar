@@ -116,7 +116,7 @@ export default async function Home({
           </div>
         )}
 
-        {view === "month" ? (
+      {view === "month" ? (
           <MonthView initialEvents={events} startDate={selected} query={query} />
         ) : view === "week" ? (
           <WeekView initialEvents={events} startDate={selected} query={query} />
@@ -124,6 +124,12 @@ export default async function Home({
           <EventList initialEvents={events} date={selected} isToday={selected === today} query={query} />
         )}
       </section>
+
+      <footer className="mt-10 text-center text-xs text-zinc-400">
+        <a href="/download" className="hover:text-zinc-600">
+          📱 下载安卓 App
+        </a>
+      </footer>
 
       <AiInput />
     </main>

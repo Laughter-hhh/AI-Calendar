@@ -236,6 +236,12 @@ async function main() {
   const patchedColor = await api(`/api/events/${colored.data?.event?.id}`, { method: "PATCH", body: { color: "red" } });
   check("修改事件颜色", patchedColor.status === 200 && patchedColor.data?.event?.color === "red", JSON.stringify(patchedColor.data));
 
+  console.log("\n13) 下载接口");
+  const dl404 = await api("/api/download/ai-calendar.apk");
+  check("文件不存在返回 404", dl404.status === 404, `status=${dl404.status}`);
+  const dlBad = await api("/api/download/..%2F..%2Fetc%2Fpasswd");
+  check("路径穿越被拒绝", dlBad.status === 404, `status=${dlBad.status}`);
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

@@ -75,6 +75,8 @@ pnpm start
 
 **安卓独立安装包（无需 Expo Go）**：访问 http://39.106.121.28:3000/download 直接下载安装。商店上架的成本、审核与更新难点见 [APP-STORE.md](docs/APP-STORE.md)。
 
+**iPhone 用户**：iOS 不支持直接下载安装包。用 Safari 打开网站 → 分享 →「添加到主屏幕」即可得到 App 图标入口；正规测试分发走 TestFlight（需 Apple 开发者账号，配置已就绪，见 [mobile/README.md](mobile/README.md)）。
+
 ## 🌐 关于域名
 
 当前用 IP + 端口访问（http://39.106.121.28:3000），适合小范围测试。正式对外发布需要域名：**国内服务器的网站绑定域名需要 ICP 备案**（约 1~2 周），备案通过后即可用 80/443 端口 + HTTPS。域名与备案已列入 V3 公网发布计划。

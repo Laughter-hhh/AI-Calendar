@@ -33,9 +33,25 @@ export default function DownloadPage() {
       </section>
 
       <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
+        <h2 className="text-base font-semibold text-zinc-800">iPhone（iOS）用户</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5">
+          <li>
+            <strong>最简单（零成本）</strong>：用 iPhone 自带的 Safari 打开本网站 →
+            点底部「分享」按钮 → 「添加到主屏幕」→ 桌面就会出现 AI Calendar 图标，和 App
+            一样一键进入。
+          </li>
+          <li>
+            <strong>正规测试版（TestFlight）</strong>：需要 Apple 开发者账号（$99/年），
+            构建后通过 TestFlight 分发链接安装——配置已就绪，需要时即可提供链接。
+          </li>
+          <li>iOS 不允许像安卓那样直接下载安装包，这是苹果平台规则。</li>
+        </ul>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
         <h2 className="text-base font-semibold text-zinc-800">说明</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5">
-          <li>当前为安卓版（Android 7.0+）。iOS 版需 Apple 开发者账号，暂未上架，可用 Safari 直接访问网页版。</li>
+          <li>当前为安卓版（Android 7.0+）。iOS 用户可用上方"添加到主屏幕"方式使用。</li>
           <li>App 是网页版的容器，功能更新无需重新安装（刷新即得最新功能）。</li>
           <li>请在浏览器直接下载本 APK；不要从不明网站下载安装包。</li>
         </ul>

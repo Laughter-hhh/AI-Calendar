@@ -1,0 +1,16 @@
+{
+  "name": "AI Calendar",
+  "short_name": "AI日历",
+  "description": "AI 原生的个人时间管理助手",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

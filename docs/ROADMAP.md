@@ -61,7 +61,7 @@
 
 ### B8. 应用分发与商店（部分完成）
 
-- 现状（v3.3.0 / v3.4.0）：网页直下 APK；EAS 构建配置（preview=APK / production=AAB）；下载页与下载接口；**iOS 构建配置就绪**（ATS、bundle id、TestFlight 流程文档）；上架成本与更新策略文档
+- 现状（v3.3.0 / v3.4.0 / v3.5.1）：网页直下 APK；EAS 构建配置；下载页与下载接口；**iOS 构建配置就绪**（ATS、TestFlight 流程）；**iPhone"添加到主屏幕"PWA-lite**（图标 + manifest）；上架成本与更新策略文档
 - 待做：正式图标/启动图；隐私政策页；注销账号入口；Google Play 与国内商店上架（依赖软著、HTTPS 等）；iOS 真机构建（依赖 Apple 开发者账号 $99/年，见 APP-STORE.md）
 
 ## C. 已完成功能的历史（详见 docs/versions/）
@@ -75,3 +75,4 @@
 - v3.3.0：安卓独立 APK（绕过 Expo Go）+ 网页直下分发 + 商店上架成本/更新策略文档
 - v3.4.0：iOS 构建配置与分发流程就绪（ATS、TestFlight 文档、商店策略）
 - v3.5.0：勾选完成事项（含 AI 标记完成、完成状态展示）
+- v3.5.1：iPhone"添加到主屏幕"PWA-lite（图标/清单）+ 下载页 iOS 说明

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
 import { dateLabel, isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { fetchCachedJson, isOnline } from "@/lib/offline";
 import DateNav from "./DateNav";
 import SearchBar from "./SearchBar";
 import EventList from "./EventList";
@@ -40,6 +41,7 @@ export default function ScheduleArea({
   const [query, setQuery] = useState(initialQuery);
   const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
+  const [offline, setOffline] = useState(false);
 
   const load = useCallback(async (d: string, v: View) => {
     setLoading(true);
@@ -52,11 +54,9 @@ export default function ScheduleArea({
       } else {
         url = `/api/events?date=${d}`;
       }
-      const res = await fetch(url, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events ?? []);
-      }
+      const res = await fetchCachedJson<{ events: CalendarEvent[] }>(url);
+      if (res.data?.events) setEvents(res.data.events);
+      setOffline(res.fromCache && !isOnline());
     } catch {
       // 网络异常保留旧数据
     } finally {
@@ -131,6 +131,11 @@ export default function ScheduleArea({
       {upcoming && (
         <p className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800">
           下一项：{upcoming.startTime} {upcoming.title}
+        </p>
+      )}
+      {offline && (
+        <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
+          离线模式：当前显示本地缓存的日程（网络恢复后自动更新）
         </p>
       )}
       <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>

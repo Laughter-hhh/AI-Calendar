@@ -311,6 +311,21 @@ async function main() {
   });
   check("未配置语音服务返回 503", sttNoKey.status === 503, `status=${sttNoKey.status}`);
 
+  console.log("\n17) 离线解析修复");
+  const p1 = await api("/api/ai/parse", { method: "POST", body: { text: "明天八点半开会" } });
+  const e1 = p1.data?.result?.events?.[0];
+  check("八点半解析为 08:30", e1?.time === "08:30" && e1?.date === todayStr(1), JSON.stringify(e1));
+  const p2 = await api("/api/ai/parse", { method: "POST", body: { text: "八点半进行实验计划与果蝇收集" } });
+  const e2 = p2.data?.result?.events?.[0];
+  check("标题只保留动作内容（去掉进行）", e2?.title === "实验计划与果蝇收集", JSON.stringify(e2));
+  check(
+    "时间 08:30 且缺失日期触发追问",
+    e2?.time === "08:30" && p2.data?.result?.missing.includes("date"),
+    JSON.stringify(p2.data?.result)
+  );
+  const p3 = await api("/api/ai/parse", { method: "POST", body: { text: "明天下午三点半接孩子" } });
+  check("下午三点半解析为 15:30", p3.data?.result?.events?.[0]?.time === "15:30", JSON.stringify(p3.data?.result));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

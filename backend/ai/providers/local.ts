@@ -104,9 +104,10 @@ export function resolveTime(text: string): { time: string | null; endTime: strin
       time = `${pad2(Number(clock[1]))}:${pad2(Number(clock[2]))}`;
       rest = rest.replace(clock[0], " ");
     } else {
-      const cn = rest.match(/([零一二两三四五六七八九十\d]{1,3})[点时]([零一二三四五六七八九十\d]{1,2})?分?/);
-      const half = !cn ? rest.match(/([零一二两三四五六七八九十\d]{1,3})点半/) : null;
-      const m = cn ?? half;
+      // "点半" 优先（否则"八点半"会被"八点"先匹配，丢掉"半"）
+      const half = rest.match(/([零一二两三四五六七八九十\d]{1,3})点半/);
+      const cn = half ? null : rest.match(/([零一二两三四五六七八九十\d]{1,3})[点时]([零一二三四五六七八九十\d]{1,2})?分?/);
+      const m = half ?? cn;
       if (m) {
         const hour = cnToNumber(m[1]);
         let minute = 0;
@@ -139,7 +140,7 @@ export function resolveTime(text: string): { time: string | null; endTime: strin
 /** 清洗标题：去掉口语前缀和标点 */
 function cleanTitle(raw: string): string {
   return raw
-    .replace(/^(我要|我想|帮我|请|安排一下|安排|预约|定个|记下|添加|加上|从|开始)/, "")
+    .replace(/^(我要|我想|帮我|请|安排一下|安排|预约|定个|记下|添加|加上|从|开始|进行|去|来做|去做|准备|组织|参加)/, "")
     .replace(/[。！？!?，,；;]/g, " ")
     .replace(/\s+/g, " ")
     .trim();

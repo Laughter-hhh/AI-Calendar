@@ -231,4 +231,5 @@ pnpm test:ui             # 或 BASE_URL=... node scripts/ui-render-check.mjs
 - 每个功能里程碑：更新本文档、写 `docs/versions/vX.Y.Z.md`、打 Git 标签、推送 GitHub
 - **版本号约定**：发布新版本时同步更新 `frontend/src/lib/version.ts` 的 `APP_VERSION` 与 Git 标签号，保持一致（自动更新检测依赖它）
 - **AI 服务配置**：统一走 `backend/ai/config.ts`（环境变量优先，`/opt/ai-calendar/config.env` 兜底，见 README），不要在代码里硬编码密钥
+- **AI 选型与语音**：选型/验证/安全/常见坑见 [docs/AI-CONFIG-HANDBOOK.md](AI-CONFIG-HANDBOOK.md)；模型建议 V3 级（deepseek-chat），7B 小模型对结构化输出遵从度低
 - 中文界面与中文注释保持一致；面向用户的说明用中文

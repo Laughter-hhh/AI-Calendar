@@ -102,6 +102,8 @@ pnpm start
 
 不配置也能用（走内置本地解析器）。配置后使用 OpenAI 兼容接口：
 
+> 选型、配置、验证、安全与常见坑，见 [AI 配置实战手册](docs/AI-CONFIG-HANDBOOK.md)。
+
 ```bash
 cd frontend
 copy .env.example .env.local   # PowerShell

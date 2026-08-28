@@ -40,6 +40,7 @@
 
 - 低价 AI Key / 免费 AI / 融资时机 / 成本决策原则：见 [docs/COST-AND-FUNDING.md](COST-AND-FUNDING.md)
 - 服务器配置模板：`deploy/config.env.example`（硅基流动/智谱/DeepSeek/通义一键切换）
+- AI 与语音配置实战（选型/验证/安全）：见 [docs/AI-CONFIG-HANDBOOK.md](AI-CONFIG-HANDBOOK.md)
 
 ### B2. 周视图 / 月视图
 

@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { listEvents, listEventsRange } from "@/lib/events";
 import type { CalendarEvent } from "@/lib/events";
-import AuthBar from "@/components/AuthBar";
 import AuthCard from "@/components/AuthCard";
 import ScheduleArea from "@/components/ScheduleArea";
 import AiInput from "@/components/AiInput";
@@ -54,15 +53,13 @@ export default async function Home({
     <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-4 md:max-w-5xl md:px-8 md:pt-8">
       <header className="flex items-center justify-between gap-3 pt-[env(safe-area-inset-top)]">
         <span className="text-lg">🗓</span>
-        <div className="flex items-center gap-2">
-          <a
-            href="/settings"
-            className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 md:px-3 md:py-2 md:text-sm"
-          >
-            ⚙️ 设置
-          </a>
-          <AuthBar email={user.email} />
-        </div>
+        <a
+          href="/settings"
+          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 md:px-3 md:py-2 md:text-sm"
+          title="设置（账号/共享/下载等）"
+        >
+          ⚙️ 设置
+        </a>
       </header>
 
       <ScheduleArea initialDate={selected} initialView={view} initialQuery={query} initialEvents={events} />

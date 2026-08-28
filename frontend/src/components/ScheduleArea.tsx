@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
 import { dateLabel, isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { APP_VERSION } from "@/lib/version";
 import { fetchCachedJson, isOnline } from "@/lib/offline";
 import DateNav from "./DateNav";
 import SearchBar from "./SearchBar";
@@ -42,6 +43,8 @@ export default function ScheduleArea({
   const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(initialQuery !== "");
 
   const load = useCallback(async (d: string, v: View) => {
     setLoading(true);
@@ -76,7 +79,6 @@ export default function ScheduleArea({
     window.history.pushState(null, "", buildUrl(date, view, q));
   }
 
-  // 浏览器后退/前进时同步
   useEffect(() => {
     const onPop = () => {
       const params = new URLSearchParams(window.location.search);
@@ -87,6 +89,7 @@ export default function ScheduleArea({
       setDate(d);
       setView(v);
       setQuery(q);
+      setSearchOpen(q !== "");
       void load(d, v);
     };
     window.addEventListener("popstate", onPop);
@@ -102,15 +105,6 @@ export default function ScheduleArea({
   }
 
   const today = todayStr();
-  const title =
-    view === "month"
-      ? `${date.slice(0, 4)}年${Number(date.slice(5, 7))}月`
-      : view === "week"
-        ? "时间安排"
-        : date === today
-          ? "今日日程"
-          : `${dateLabel(date)} 的日程`;
-
   const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(11, 16);
   const upcoming =
     view === "day" && date === today
@@ -130,22 +124,45 @@ export default function ScheduleArea({
     void load(date, view);
   }
 
+  const menuItem =
+    "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-100";
+
   return (
     <section className="mt-3">
-      <h2 className="mb-1.5 text-sm font-semibold text-zinc-700">{title}</h2>
-      <DateNav date={date} view={view} onNavigate={navigate} />
+      {/* 主功能栏：日期切换 + 视图 + 更多菜单 */}
       <div className="mb-2 flex items-center gap-1.5">
-        <SearchBar query={query} onSearch={search} />
+        <div className="min-w-0 flex-1">
+          <DateNav date={date} view={view} onNavigate={navigate} />
+        </div>
         <button
-          onClick={quickTodo}
-          className="shrink-0 rounded-lg border border-dashed border-zinc-300 bg-white px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-50 md:px-3 md:py-2 md:text-sm"
-          title="快速添加无时间待办"
+          onClick={() => setMenuOpen(true)}
+          className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-lg leading-none text-zinc-600 hover:bg-zinc-100 md:px-4 md:py-2"
+          title="更多功能"
+          aria-label="更多功能"
         >
-          ＋待办
+          ⋯
         </button>
-        <ExportButton from={exportFrom} to={exportTo} />
-        <ImportButton />
       </div>
+
+      {/* 搜索行（点菜单里的"搜索"展开） */}
+      {searchOpen && (
+        <div className="mb-2 flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            <SearchBar query={query} onSearch={search} />
+          </div>
+          <button
+            onClick={() => {
+              setSearchOpen(false);
+              if (query) search("");
+            }}
+            className="shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100"
+            title="关闭搜索"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {upcoming && (
         <p className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800">
           下一项：{upcoming.startTime} {upcoming.title}
@@ -156,6 +173,7 @@ export default function ScheduleArea({
           离线模式：当前显示本地缓存的日程（网络恢复后自动更新）
         </p>
       )}
+
       <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
         {view === "month" ? (
           <MonthView
@@ -171,6 +189,49 @@ export default function ScheduleArea({
           <EventList initialEvents={events} date={date} isToday={date === today} query={query} />
         )}
       </div>
+
+      {/* 更多功能菜单 */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setMenuOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl">
+            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-zinc-200" />
+            <button
+              className={menuItem}
+              onClick={() => {
+                setMenuOpen(false);
+                setSearchOpen(true);
+              }}
+            >
+              🔍 搜索日程
+            </button>
+            <button
+              className={menuItem}
+              onClick={() => {
+                setMenuOpen(false);
+                void quickTodo();
+              }}
+            >
+              ＋ 添加待办
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1">
+              <span className="text-sm text-zinc-700">⇩ 导出 / ⇧ 导入</span>
+              <ExportButton from={exportFrom} to={exportTo} />
+              <ImportButton />
+            </div>
+            <a href="/settings" className={menuItem}>
+              ⚙️ 设置（账号 / 共享 / 下载）
+            </a>
+            <a href="/shares" className={menuItem}>
+              🔗 共享日历
+            </a>
+            <a href="/download" className={menuItem}>
+              📱 下载安卓 App
+            </a>
+            <p className="mt-2 text-center text-xs text-zinc-400">AI Calendar v{APP_VERSION}</p>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

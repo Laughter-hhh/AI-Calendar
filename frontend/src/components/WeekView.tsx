@@ -11,11 +11,13 @@ const ROW_H = 44;
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
 const BLOCK_COLORS: Record<string, string> = {
-  red: "bg-red-400/80 border-red-500",
-  orange: "bg-orange-400/80 border-orange-500",
-  green: "bg-emerald-400/80 border-emerald-500",
-  blue: "bg-blue-400/80 border-blue-500",
-  purple: "bg-violet-400/80 border-violet-500",
+  red: "bg-red-500/90 border-red-600 text-white",
+  orange: "bg-orange-500/90 border-orange-600 text-white",
+  amber: "bg-amber-500/90 border-amber-600 text-white",
+  green: "bg-green-500/90 border-green-600 text-white",
+  blue: "bg-sky-500/90 border-sky-600 text-white",
+  purple: "bg-violet-500/90 border-violet-600 text-white",
+  pink: "bg-pink-500/90 border-pink-600 text-white",
 };
 
 function toMinutes(t: string): number {
@@ -139,7 +141,8 @@ export default function WeekView({
                     ? Math.max(30, toMinutes(ev.endTime) - toMinutes(ev.startTime!))
                     : 60;
                   const height = (dur / 60) * ROW_H;
-                  const cls = BLOCK_COLORS[ev.color ?? ""] ?? "bg-zinc-200 border-zinc-300";
+                  const cls =
+                    BLOCK_COLORS[ev.color ?? ""] ?? "bg-zinc-200 border-zinc-300 text-zinc-800";
                   return (
                     <button
                       key={`${ev.id}-${d}`}
@@ -149,7 +152,7 @@ export default function WeekView({
                       style={{ top, height }}
                       title={`${ev.startTime} ${ev.title}`}
                     >
-                      <span className="block truncate text-[10px] font-medium leading-tight text-zinc-800">
+                      <span className="block truncate text-[10px] font-medium leading-tight">
                         {`${ev.startTime} ${ev.title}`}
                       </span>
                     </button>

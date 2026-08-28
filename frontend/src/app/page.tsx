@@ -50,17 +50,7 @@ export default async function Home({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-4 md:max-w-5xl md:px-8 md:pt-8">
-      <header className="flex items-center justify-between gap-3 pt-[env(safe-area-inset-top)]">
-        <span className="text-lg">🗓</span>
-        <a
-          href="/settings"
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 md:px-3 md:py-2 md:text-sm"
-          title="设置（账号/共享/下载等）"
-        >
-          ⚙️ 设置
-        </a>
-      </header>
+    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:max-w-5xl md:px-8 md:pt-[calc(env(safe-area-inset-top)+1.5rem)]">
 
       <ScheduleArea initialDate={selected} initialView={view} initialQuery={query} initialEvents={events} />
 

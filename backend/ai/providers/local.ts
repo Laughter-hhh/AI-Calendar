@@ -142,6 +142,7 @@ function cleanTitle(raw: string): string {
   return raw
     .replace(/^(我要|我想|帮我|请|安排一下|安排|预约|定个|记下|添加|加上|从|开始|进行|去|来做|去做|准备|组织|参加)/, "")
     .replace(/[。！？!?，,；;]/g, " ")
+    .replace(/^[:：,，、;；\s]+/, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -209,8 +210,19 @@ export const localParser: AIParser = {
 
     // 4. 时间
     const resolvedTime = resolveTime(rest);
-    const time = context?.time ?? resolvedTime.time ?? null;
+    let time = context?.time ?? resolvedTime.time ?? null;
     if (resolvedTime.time) rest = resolvedTime.rest;
+
+    // 无时间待办：明确说"无时间/待办/不限定时间"时，不再追问时间，生成全天待办
+    const wantsNoTime = /无时间|没有时间|不限定时间|不定时间|(^|[:：，, ])待办(事项)?/.test(rest);
+    if (wantsNoTime) {
+      rest = rest
+        .replace(/无时间|没有时间|不限定时间|不定时间/g, " ")
+        .replace(/(^|[:：，, ])待办(事项)?/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      time = null;
+    }
 
     // 5. 标题
     const title = context?.title ?? cleanTitle(rest);
@@ -219,10 +231,10 @@ export const localParser: AIParser = {
     const missing: string[] = [];
     if (!title) missing.push("title");
     if (!startDate) missing.push("date");
-    if (!time) missing.push("time");
+    if (!time && !wantsNoTime) missing.push("time");
 
     let events: ParsedEvent[] = [];
-    if (title && startDate && time) {
+    if (title && startDate && (time || wantsNoTime)) {
       for (let i = 0; i < (repeatDays > 0 ? repeatDays : 1); i++) {
         events.push({
           title,

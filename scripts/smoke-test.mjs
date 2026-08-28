@@ -326,6 +326,27 @@ async function main() {
   const p3 = await api("/api/ai/parse", { method: "POST", body: { text: "明天下午三点半接孩子" } });
   check("下午三点半解析为 15:30", p3.data?.result?.events?.[0]?.time === "15:30", JSON.stringify(p3.data?.result));
 
+  console.log("\n18) 无时间待办");
+  const t1 = await api("/api/ai/parse", { method: "POST", body: { text: "待办：明天交报告" } });
+  const te1 = t1.data?.result?.events?.[0];
+  check(
+    "待办解析为无时间日程",
+    te1?.time === null && te1?.title === "交报告" && te1?.date === todayStr(1),
+    JSON.stringify(te1)
+  );
+  check("待办不再追问时间", t1.data?.result?.missing.length === 0, JSON.stringify(t1.data?.result));
+  const t2 = await api("/api/ai/parse", { method: "POST", body: { text: "明天整理笔记无时间" } });
+  check("无时间关键词解析为全天", t2.data?.result?.events?.[0]?.time === null, JSON.stringify(t2.data?.result));
+  const t3 = await api("/api/ai/parse", {
+    method: "POST",
+    body: { text: "无时间", context: { title: "整理笔记", date: todayStr(1) } },
+  });
+  check(
+    "追问时回答无时间也能创建",
+    t3.data?.result?.events?.[0]?.time === null && t3.data?.result?.missing.length === 0,
+    JSON.stringify(t3.data?.result)
+  );
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

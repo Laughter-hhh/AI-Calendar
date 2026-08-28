@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import VersionChecker from "@/components/VersionChecker";
 
@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-title": "AI Calendar",
   },
+};
+
+// 允许网页内容延伸到刘海屏区域，配合 safe-area 内边距避免被状态栏遮挡
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

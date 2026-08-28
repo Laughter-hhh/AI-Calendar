@@ -56,15 +56,15 @@ async function main() {
   check("日期页显示日期标题（如 明天/月日）", datePage.text.includes("的日程"));
   check(
     "日期页包含紧凑切换与视图控件",
-    datePage.text.includes("前一天") &&
+      datePage.text.includes("前一天") &&
       datePage.text.includes("后一天") &&
       datePage.text.includes("单日") &&
-      datePage.text.includes("7天")
+      datePage.text.includes("时间安排")
   );
   check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
 
   const weekPage = await api(`/?date=${tomorrow}&view=week`);
-  check("周视图页面返回 200 且含未来7天标题", weekPage.status === 200 && weekPage.text.includes("未来 7 天"), `status=${weekPage.status}`);
+  check("时间安排页返回 200 且含标题与时间刻度", weekPage.status === 200 && weekPage.text.includes("时间安排") && weekPage.text.includes("6:00"), `status=${weekPage.status}`);
   check("周视图页面显示该日程", weekPage.text.includes("界面测试日程"));
 
   const monthPage = await api(`/?date=${todayStr(0)}&view=month`);
@@ -97,9 +97,18 @@ async function main() {
   check("下载页包含下载按钮与 APK 链接", downloadPage.text.includes("下载 APK 安装包") && downloadPage.text.includes("/api/download/ai-calendar.apk"));
   check("下载页包含 iPhone 使用说明", downloadPage.text.includes("iPhone") && downloadPage.text.includes("添加到主屏幕"));
   check("首页包含苹果主屏幕图标与清单", todayPage.text.includes("apple-touch-icon") && todayPage.text.includes("manifest.webmanifest"));
-  check("登录后页面包含共享日历入口", datePage.text.includes("共享日历"));
+  check("登录后页面包含设置入口与安全区", datePage.text.includes("设置") && datePage.text.includes("safe-area-inset-top"));
   const sharesPage = await api("/shares");
   check("共享页返回 200 且含共享表单", sharesPage.status === 200 && sharesPage.text.includes("共享我的日历"), `status=${sharesPage.status}`);
+  const settingsPage = await api("/settings");
+  check(
+    "设置页返回 200 且含功能入口与版本",
+    settingsPage.status === 200 &&
+      settingsPage.text.includes("共享日历") &&
+      settingsPage.text.includes("下载安卓 App") &&
+      settingsPage.text.includes("版本"),
+    `status=${settingsPage.status}`
+  );
 
   if (failures.length === 0) {
     console.log("\n🎉 页面渲染检查全部通过");

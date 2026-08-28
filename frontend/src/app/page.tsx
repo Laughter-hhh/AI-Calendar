@@ -52,24 +52,20 @@ export default async function Home({
 
   return (
     <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-4 md:max-w-5xl md:px-8 md:pt-8">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold md:text-2xl">AI Calendar</h1>
-          <p className="hidden text-sm text-zinc-500 md:block">AI 时间管理助手 · 一句话安排日程</p>
+      <header className="flex items-center justify-between gap-3 pt-[env(safe-area-inset-top)]">
+        <span className="text-lg">🗓</span>
+        <div className="flex items-center gap-2">
+          <a
+            href="/settings"
+            className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 md:px-3 md:py-2 md:text-sm"
+          >
+            ⚙️ 设置
+          </a>
+          <AuthBar email={user.email} />
         </div>
-        <AuthBar email={user.email} />
       </header>
 
       <ScheduleArea initialDate={selected} initialView={view} initialQuery={query} initialEvents={events} />
-
-      <footer className="mt-8 flex justify-center gap-4 text-center text-xs text-zinc-400">
-        <a href="/shares" className="hover:text-zinc-600">
-          🔗 共享日历
-        </a>
-        <a href="/download" className="hover:text-zinc-600">
-          📱 下载安卓 App
-        </a>
-      </footer>
 
       <AiInput />
     </main>

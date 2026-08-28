@@ -106,7 +106,7 @@ export default function ScheduleArea({
     view === "month"
       ? `${date.slice(0, 4)}年${Number(date.slice(5, 7))}月`
       : view === "week"
-        ? "未来 7 天"
+        ? "时间安排"
         : date === today
           ? "今日日程"
           : `${dateLabel(date)} 的日程`;
@@ -119,12 +119,30 @@ export default function ScheduleArea({
           .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0] ?? null)
       : null;
 
+  async function quickTodo() {
+    const title = window.prompt("待办事项内容（无时间，默认全天）：");
+    if (!title?.trim()) return;
+    await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title.trim(), date, time: null }),
+    });
+    void load(date, view);
+  }
+
   return (
     <section className="mt-3">
-      <h2 className="mb-2 text-lg font-semibold md:mb-3 md:text-xl">{title}</h2>
+      <h2 className="mb-1.5 text-sm font-semibold text-zinc-700">{title}</h2>
       <DateNav date={date} view={view} onNavigate={navigate} />
       <div className="mb-2 flex items-center gap-1.5">
         <SearchBar query={query} onSearch={search} />
+        <button
+          onClick={quickTodo}
+          className="shrink-0 rounded-lg border border-dashed border-zinc-300 bg-white px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-50 md:px-3 md:py-2 md:text-sm"
+          title="快速添加无时间待办"
+        >
+          ＋待办
+        </button>
         <ExportButton from={exportFrom} to={exportTo} />
         <ImportButton />
       </div>
@@ -148,7 +166,7 @@ export default function ScheduleArea({
             onSelectDay={(d) => navigate(d, "day")}
           />
         ) : view === "week" ? (
-          <WeekView initialEvents={events} startDate={date} query={query} />
+          <WeekView initialEvents={events} startDate={date} query={query} onSelectDay={(d) => navigate(d, "day")} />
         ) : (
           <EventList initialEvents={events} date={date} isToday={date === today} query={query} />
         )}

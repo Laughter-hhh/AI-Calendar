@@ -51,8 +51,8 @@ export default function DateNav({
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {(["day", "week", "month"] as const).map((v) => (
           <button key={v} onClick={() => onNavigate(date, v)} className={seg(view === v)}>
-            <span className="md:hidden">{v === "day" ? "单日" : v === "week" ? "7天" : "月"}</span>
-            <span className="hidden md:inline">{v === "day" ? "单日" : v === "week" ? "未来7天" : "月视图"}</span>
+            <span className="md:hidden">{v === "day" ? "单日" : v === "week" ? "时间" : "月"}</span>
+            <span className="hidden md:inline">{v === "day" ? "单日" : v === "week" ? "时间安排" : "月视图"}</span>
           </button>
         ))}
       </div>

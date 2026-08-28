@@ -1,6 +1,7 @@
 // OpenAI 兼容解析器：任何兼容 /chat/completions 的服务都可以接入
 import type { AIParser, ParseContext, ParseResult } from "../types";
 import { resolveDate, resolveTime } from "./local";
+import { todayStr } from "../date-utils";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MODEL = "gpt-4o-mini";
@@ -21,6 +22,7 @@ export class OpenAICompatibleParser implements AIParser {
   async parse(text: string, context?: ParseContext): Promise<ParseResult> {
     const system = [
       "你是日历事件解析助手。把用户的中文自然语言转换成结构化日程。",
+      `今天是 ${todayStr()}（中国时区）。相对日期（今天/明天/后天/下周一）必须按这个今天换算成具体的 YYYY-MM-DD。`,
       "规则：",
       "1. 必须把相对日期（今天/明天/后天/下周一）换算成具体日期，输出严格 YYYY-MM-DD；",
       "2. 时间必须输出严格 24 小时制 HH:mm（例如 08:30、15:00），全天事件用 null；",
@@ -64,7 +66,12 @@ export class OpenAICompatibleParser implements AIParser {
     };
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI 服务返回内容为空");
-    const result = JSON.parse(content) as ParseResult;
+    // 兼容模型输出带 ```json 代码块围栏的情况
+    const jsonText = content
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+    const result = JSON.parse(jsonText) as ParseResult;
     return normalizeResult(result);
   }
 }

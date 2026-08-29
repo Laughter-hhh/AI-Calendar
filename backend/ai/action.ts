@@ -25,7 +25,7 @@ type FindEvents = (from: string, to: string) => EventLike[];
 
 const MODIFY_RE = /(改(?:到|成|为)|挪(?:到|至)|移(?:到|至)|调整(?:到|至)?|提前(?:到)?|推迟(?:到)?|延后(?:到)?|调到)/;
 const DELETE_RE = /(?:删除|删掉|取消|去掉|移除)/;
-const DONE_RE = /(?:完成|做完|搞定|划掉|标记完成|完成掉)/;
+const DONE_VERB_RE = /完成掉|标记完成|做完|搞定|划掉|完成/;
 const FILLERS_RE = /把|将|的|这个|那个|刚才|最近|一下|帮我|请|了/g;
 
 function cleanKeyword(s: string): string {
@@ -46,13 +46,18 @@ export function resolveAction(text: string, findEvents: FindEvents): ActionResul
   const input = text.trim();
   const isDelete = DELETE_RE.test(input);
   const modifyMatch = input.match(MODIFY_RE);
-  const isDone = !isDelete && !modifyMatch && DONE_RE.test(input);
+  // "完成X" 只有在没有日期时才视为"标记完成"；
+  // 带日期的"X月Y日完成Z"是安排当天全天待办（例：八月三十一完成年度审核），不能拦截成完成操作
+  const hasDate = resolveDate(input) !== null;
+  const explicitDone = /完成掉|标记完成|做完|搞定|划掉/.test(input);
+  const bareDone = /完成/.test(input) && !hasDate;
+  const isDone = !isDelete && !modifyMatch && (explicitDone || bareDone);
 
   if (!isDelete && !modifyMatch && !isDone) {
     return { action: null, event: null, changes: null, message: "", candidates: [] };
   }
 
-  const verbText = isDelete ? input.match(DELETE_RE)![0] : isDone ? input.match(DONE_RE)![0] : modifyMatch![0];
+  const verbText = isDelete ? input.match(DELETE_RE)![0] : isDone ? input.match(DONE_VERB_RE)![0] : modifyMatch![0];
   const verbIndex = input.indexOf(verbText);
   let before = input.slice(0, verbIndex);
   let after = input.slice(verbIndex + verbText.length);

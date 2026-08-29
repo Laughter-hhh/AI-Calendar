@@ -2,6 +2,7 @@
 // 1) 配置 Key 时：模型理解自然语言 → 改写成标准句式 → 本地固定程序生成日程
 // 2) 未配置 Key 或模型失败时：直接用本地规则解析器
 import { localParser } from "./providers/local";
+import { isDeadlineSentence } from "./providers/local";
 import { OpenAICompatibleParser } from "./providers/openai";
 import type { ParseContext, ParseResult } from "./types";
 import { getConfig } from "./config";
@@ -22,7 +23,15 @@ export async function parseEvent(
       });
       const canonical = await parser.normalize(text, context);
       if (canonical) {
-        const result = await localParser.parse(canonical, context);
+        // 防模型过度解读：原句没有"前/之前/截止"时，去掉标准句里被模型强加的"前/之前"
+        // （例：八月三十一完成年度审核 → 8.31 全天待办，而不是截止提醒）
+        const safeCanonical = !isDeadlineSentence(text)
+          ? canonical.replace(
+              /((?:[零一二两三四五六七八九十\d]{1,3})月(?:[零一二两三四五六七八九十\d]{1,3})[日号]?)(?:前|之前)/g,
+              "$1"
+            )
+          : canonical;
+        const result = await localParser.parse(safeCanonical, context);
         // 只要标准化结果可用（有事件或需要追问），就使用它
         if (result.events.length > 0 || result.missing.length > 0) {
           return { result, provider: "openai" };

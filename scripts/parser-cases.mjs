@@ -89,6 +89,18 @@ async function main() {
     JSON.stringify(r.result)
   );
 
+  const aug31 = `${new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear()}-08-31`;
+  r = await parse("八月三十一完成年度审核");
+  check(
+    "八月三十一完成年度审核 → 8.31 全天待办（不误判截止）",
+    r.result.events?.length === 1 &&
+      r.result.events?.[0]?.date === aug31 &&
+      r.result.events?.[0]?.time === null &&
+      r.result.events?.[0]?.title === "年度审核" &&
+      r.result.missing?.length === 0,
+    JSON.stringify(r.result)
+  );
+
   r = await parse("交报告");
   check("交报告 → 当天待办", r.result.events?.length === 1 && r.result.events[0].time === null && r.result.events[0].date === todayStr(0) && r.result.missing.length === 0, JSON.stringify(r.result));
 

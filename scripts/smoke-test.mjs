@@ -204,6 +204,19 @@ async function main() {
   const a4 = await api("/api/ai/action", { method: "POST", body: { text: "明天下午三点开会" } });
   check("创建意图不被误判为修改/删除", a4.data?.result?.action === null && a4.data?.result?.message === "", JSON.stringify(a4.data?.result));
 
+  const a5 = await api("/api/ai/action", { method: "POST", body: { text: "八月三十一完成年度审核" } });
+  check(
+    "带日期的'完成X'不误判为完成操作（放行创建）",
+    a5.data?.result?.action === null && a5.data?.result?.message === "",
+    JSON.stringify(a5.data?.result)
+  );
+  const a6 = await api("/api/ai/action", { method: "POST", body: { text: "八月三十一之前完成年度审核" } });
+  check(
+    "截止句不误判为完成操作（放行截止提醒）",
+    a6.data?.result?.action === null && a6.data?.result?.message === "",
+    JSON.stringify(a6.data?.result)
+  );
+
   console.log("\n10) 区间查询与健康检查");
   const range = await api(`/api/events?from=${todayStr(-3)}&to=${todayStr(3)}`);
   check("区间查询返回 200", range.status === 200, `status=${range.status}`);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CalendarEvent } from "@/lib/events";
-import { EVENT_COLORS, colorDot } from "@/lib/colors";
+import { EVENT_COLORS, colorDot, colorText } from "@/lib/colors";
 
 function repeatLabel(r: string): string {
   if (r === "daily") return "每天";
@@ -202,7 +202,7 @@ export default function EventList({
                   onClick={() => setDetailId(detailId === ev.id ? null : ev.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <div className={`w-12 shrink-0 text-sm font-medium md:w-16 ${ev.done ? "text-zinc-300 line-through" : "text-zinc-700"}`}>
+                  <div className={`w-12 shrink-0 text-sm font-medium md:w-16 ${ev.done ? "text-zinc-300 line-through" : colorText(ev.color)}`}>
                     {ev.startTime ?? "全天"}
                   </div>
                   <div className="min-w-0 flex-1">

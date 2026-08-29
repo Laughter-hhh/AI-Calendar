@@ -235,7 +235,7 @@ export default function AiInput() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/90 to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-8">
+    <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#eef2f7] via-[#eef2f7]/90 to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-8">
       <div className="mx-auto w-full max-w-3xl md:max-w-5xl">
         {status === "action" && actionResult?.event && (
           <div className="mb-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">

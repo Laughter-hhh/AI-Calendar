@@ -1,6 +1,7 @@
 // 事件数据访问层：所有 SQL 和重复规则展开都集中在这里
 import { getDb } from "./db";
 import { shiftDate } from "./date";
+import { EVENT_COLORS } from "./colors";
 
 export interface CalendarEvent {
   id: number;
@@ -209,6 +210,8 @@ export function listEventsRange(userId: number, from: string, to: string): Calen
 }
 
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {
+  // 未指定颜色时，自动随机分配一个非灰色（跳过 EVENT_COLORS 第一项"无"）
+  const color = data.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
   const info = getDb()
     .prepare(
       `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text)
@@ -223,7 +226,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
       data.note ?? null,
       data.repeat ?? null,
       data.repeatUntil ?? null,
-      data.color ?? null,
+      color,
       data.done ? 1 : 0,
       data.sourceText ?? null
     );
@@ -236,7 +239,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
     note: data.note ?? null,
     repeat: data.repeat ?? null,
     repeatUntil: data.repeatUntil ?? null,
-    color: data.color ?? null,
+    color,
     done: data.done === true,
     sourceText: data.sourceText ?? null,
   };

@@ -395,6 +395,12 @@ async function main() {
     JSON.stringify(dl3.data?.result)
   );
 
+  console.log("\n21) 新建日程自动随机颜色");
+  const rc = await api("/api/events", { method: "POST", body: { title: "随机色测试", date: todayStr(1), time: "09:00" } });
+  const rcColor = rc.data?.event?.color;
+  const allowed = ["red", "orange", "amber", "green", "blue", "purple", "pink"];
+  check("未指定颜色时自动分配非灰色", typeof rcColor === "string" && allowed.includes(rcColor), JSON.stringify(rc.data));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

@@ -60,14 +60,14 @@ export function resolveDate(text: string): { date: string; rest: string } | null
     return { date: addDaysStr(todayStr(), diff), rest: rest.replace(/\s+/g, " ").trim() };
   }
 
-  const monthDay = rest.match(/(\d{1,2})月(\d{1,2})[日号]?/);
+  const monthDay = rest.match(/([零一二两三四五六七八九十\d]{1,3})月([零一二两三四五六七八九十\d]{1,3})[日号]?/);
   if (monthDay) {
-    const month = Number(monthDay[1]);
-    const day = Number(monthDay[2]);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    const month = cnToNumber(monthDay[1]);
+    const day = cnToNumber(monthDay[2]);
+    if (month !== null && day !== null && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       const year = Number(todayStr().slice(0, 4));
       rest = rest.replace(monthDay[0], " ");
-      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dateStr = `${year}-${pad2(month)}-${pad2(day)}`;
       return { date: addDaysStr(dateStr, 0), rest: rest.replace(/\s+/g, " ").trim() };
     }
   }
@@ -202,12 +202,14 @@ export const localParser: AIParser = {
 
     // 2.5 截止日期提醒任务："8月31号前完成实验报告" → 截止前 7/3/1 天 + 当天各一条待办
     let deadlineDate: string | null = null;
-    const deadlineMatch = rest.match(/(?:截止|截至)?(?:到|在)?(\d{1,2})月(\d{1,2})[日号]?(?:前|之前|截止|前截止)/);
+    const deadlineMatch = rest.match(
+      /(?:截止|截至)?(?:到|在)?([零一二两三四五六七八九十\d]{1,3})月([零一二两三四五六七八九十\d]{1,3})[日号]?(?:前|之前|截止|前截止)/
+    );
     if (deadlineMatch) {
       const y = Number(todayStr().slice(0, 4));
-      const m = Number(deadlineMatch[1]);
-      const d = Number(deadlineMatch[2]);
-      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const m = cnToNumber(deadlineMatch[1]);
+      const d = cnToNumber(deadlineMatch[2]);
+      if (m !== null && d !== null && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
         // "X月Y日前" → 有效截止日为 Y-1（例：8月31号前 → 8.30 截止）
         deadlineDate = addDaysStr(`${y}-${pad2(m)}-${pad2(d)}`, -1);
         rest = rest.replace(deadlineMatch[0], " ");

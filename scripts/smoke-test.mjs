@@ -395,6 +395,27 @@ async function main() {
     JSON.stringify(dl3.data?.result)
   );
 
+  const dl4 = await api("/api/ai/parse", { method: "POST", body: { text: "八月三十一之前完成年度审核" } });
+  const devs4 = dl4.data?.result?.events ?? [];
+  check(
+    "中文数字截止日期识别为4条提醒",
+    devs4.length === 4 && devs4[0]?.title === "距离年度审核还有七天" && devs4[3]?.title === "今天截止：年度审核",
+    JSON.stringify(devs4)
+  );
+  const dl5 = await api("/api/ai/parse", { method: "POST", body: { text: "九月一号之前交总结" } });
+  const devs5 = dl5.data?.result?.events ?? [];
+  check(
+    "中文数字日期（含号）截止识别",
+    devs5.length === 4 && devs5[3]?.date === "2026-08-31",
+    JSON.stringify(devs5)
+  );
+  const dl6 = await api("/api/ai/parse", { method: "POST", body: { text: "八月三十一日开会" } });
+  check(
+    "中文数字日期普通日程（追问时间）",
+    dl6.data?.result?.missing.includes("time") && dl6.data?.result?.events?.[0]?.date === "2026-08-31",
+    JSON.stringify(dl6.data?.result)
+  );
+
   console.log("\n21) 新建日程自动随机颜色");
   const rc = await api("/api/events", { method: "POST", body: { title: "随机色测试", date: todayStr(1), time: "09:00" } });
   const rcColor = rc.data?.event?.color;

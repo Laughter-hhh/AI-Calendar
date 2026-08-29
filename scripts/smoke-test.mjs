@@ -357,8 +357,10 @@ async function main() {
   );
   const d2 = await api("/api/ai/parse", { method: "POST", body: { text: "明天交报告" } });
   check(
-    "有日期无时间仍追问时间",
-    d2.data?.result?.missing.includes("time") && d2.data?.result?.events?.[0]?.date === todayStr(1),
+    "有日期无时间自动识别为全天待办",
+    d2.data?.result?.missing.length === 0 &&
+      d2.data?.result?.events?.[0]?.time === null &&
+      d2.data?.result?.events?.[0]?.date === todayStr(1),
     JSON.stringify(d2.data?.result)
   );
   const d3 = await api("/api/ai/parse", { method: "POST", body: { text: "晚上八点学习" } });
@@ -390,8 +392,10 @@ async function main() {
   check("截止任务缺标题时追问", dl2.data?.result?.missing.includes("title"), JSON.stringify(dl2.data?.result));
   const dl3 = await api("/api/ai/parse", { method: "POST", body: { text: "8月31日开会" } });
   check(
-    "无'前'字仍是普通日期（追问时间）",
-    dl3.data?.result?.missing.includes("time") && dl3.data?.result?.events?.[0]?.date === "2026-08-31",
+    "无'前'字仍是普通日期（全天待办）",
+    dl3.data?.result?.missing.length === 0 &&
+      dl3.data?.result?.events?.[0]?.time === null &&
+      dl3.data?.result?.events?.[0]?.date === "2026-08-31",
     JSON.stringify(dl3.data?.result)
   );
 
@@ -411,8 +415,10 @@ async function main() {
   );
   const dl6 = await api("/api/ai/parse", { method: "POST", body: { text: "八月三十一日开会" } });
   check(
-    "中文数字日期普通日程（追问时间）",
-    dl6.data?.result?.missing.includes("time") && dl6.data?.result?.events?.[0]?.date === "2026-08-31",
+    "中文数字日期普通日程（全天待办）",
+    dl6.data?.result?.missing.length === 0 &&
+      dl6.data?.result?.events?.[0]?.time === null &&
+      dl6.data?.result?.events?.[0]?.date === "2026-08-31",
     JSON.stringify(dl6.data?.result)
   );
 

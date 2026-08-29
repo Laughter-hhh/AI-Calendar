@@ -80,12 +80,12 @@ async function main() {
   const sep1 = `${new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear()}-09-01`;
   r = await parse("九月一号领取美团骑行卡");
   check(
-    "九月一号领取美团骑行卡 → 识别日期并追问时间（含无时间提示）",
+    "九月一号领取美团骑行卡 → 全天待办（不再追问）",
     r.result.events?.[0]?.date === sep1 &&
       r.result.events?.[0]?.title === "领取美团骑行卡" &&
-      r.result.missing?.length === 1 &&
-      r.result.missing[0] === "time" &&
-      r.result.message?.includes("无时间"),
+      r.result.events?.[0]?.time === null &&
+      r.result.missing?.length === 0 &&
+      r.result.message?.includes("全天待办"),
     JSON.stringify(r.result)
   );
 
@@ -99,7 +99,11 @@ async function main() {
   check("明天整理笔记无时间 → 全天待办", r.result.events?.[0]?.time === null && r.result.events?.[0]?.date === todayStr(1), JSON.stringify(r.result));
 
   r = await parse("明天开会");
-  check("明天开会 → 追问时间", r.result.missing.includes("time"), JSON.stringify(r.result));
+  check(
+    "明天开会 → 全天待办",
+    r.result.events?.[0]?.time === null && r.result.events?.[0]?.date === todayStr(1) && r.result.missing.length === 0,
+    JSON.stringify(r.result)
+  );
 
   r = await parse("晚上八点学习");
   check("晚上八点学习 → 追问日期", r.result.missing.includes("date"), JSON.stringify(r.result));

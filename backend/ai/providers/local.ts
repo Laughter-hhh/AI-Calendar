@@ -255,12 +255,10 @@ export const localParser: AIParser = {
     // 5. 标题
     const title = context?.title ?? cleanTitle(rest);
 
-    // 6. 缺失信息检查（产品原则：信息缺失时询问，不自动猜测）
+    // 6. 缺失信息检查（产品规则：缺标题/日期才追问；时间缺失一律按全天待办处理）
     const missing: string[] = [];
     if (!title) missing.push("title");
     if (!startDate) missing.push("date");
-    // 有时间缺失且已有日期时才追问时间；"无日期无时间"直接按待办处理
-    if (!time && !wantsNoTime && !deadlineDate && date) missing.push("time");
 
     let events: ParsedEvent[] = [];
     if (deadlineDate && title) {
@@ -281,7 +279,7 @@ export const localParser: AIParser = {
           note: `截止：${deadlineDate}`,
         });
       }
-    } else if (title && startDate && (time || wantsNoTime || !date)) {
+    } else if (title && startDate) {
       for (let i = 0; i < (repeatDays > 0 ? repeatDays : 1); i++) {
         events.push({
           title,
@@ -297,19 +295,14 @@ export const localParser: AIParser = {
 
     let message: string;
     if (missing.length > 0) {
-      const names: Record<string, string> = { title: "做什么", date: "哪天", time: "几点" };
-      // 先回显已识别到的信息，避免用户误以为系统没听懂（例：九月一号领取美团骑行卡）
+      const names: Record<string, string> = { title: "做什么", date: "哪天" };
+      // 先回显已识别到的信息，避免用户误以为系统没听懂（例：晚上八点学习 → 已识别时间，缺日期）
       const recognized: string[] = [];
       if (title) recognized.push(`「${title}」`);
       if (startDate) recognized.push(startDate);
       if (time) recognized.push(time);
       const echo = recognized.length > 0 ? `已识别：${recognized.join(" ")}。` : "";
-      // 只缺时间时，提示可用"无时间/待办"创建全天待办
-      const hint =
-        missing.length === 1 && missing[0] === "time" && !deadlineDate
-          ? "如果没有具体时间，回复“无时间”或“待办”可创建全天待办。"
-          : "";
-      message = `${echo}还差一点信息：${missing.map((k) => names[k]).join("、")}。请告诉我。${hint}`;
+      message = `${echo}还差一点信息：${missing.map((k) => names[k]).join("、")}。请告诉我。`;
     } else if (repeatDays > 0) {
       message = `已为你安排从 ${startDate} 起连续 ${repeatDays} 天的日程。`;
     } else if (repeat) {
@@ -317,6 +310,9 @@ export const localParser: AIParser = {
       message = `已为你安排${repeatNames[repeat] ?? repeat}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
     } else if (deadlineDate) {
       message = `已为「${title}」生成截止提醒：提前 7 天、3 天、1 天、当天（截止 ${deadlineDate}）。`;
+    } else if (!time) {
+      // 有日期无时间（或默认今天）→ 全天待办
+      message = `已识别为全天待办：${startDate}「${title}」。确认后保存。`;
     } else {
       message = "已为你安排好日程，确认后保存。";
     }

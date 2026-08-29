@@ -140,7 +140,7 @@ export function resolveTime(text: string): { time: string | null; endTime: strin
 /** 清洗标题：去掉口语前缀和标点 */
 function cleanTitle(raw: string): string {
   return raw
-    .replace(/^(我要|我想|帮我|请|安排一下|安排|预约|定个|记下|添加|加上|从|开始|进行|去|来做|去做|准备|组织|参加)/, "")
+    .replace(/^\s*(我要|我想|帮我|请|安排一下|安排|预约|定个|记下|添加|加上|从|开始|进行|去|来做|去做|准备|组织|参加|完成)/, "")
     .replace(/[。！？!?，,；;]/g, " ")
     .replace(/^[:：,，、;；\s]+/, "")
     .replace(/\s+/g, " ")
@@ -200,6 +200,20 @@ export const localParser: AIParser = {
       }
     }
 
+    // 2.5 截止日期提醒任务："8月31号前完成实验报告" → 截止前 7/3/1 天 + 当天各一条待办
+    let deadlineDate: string | null = null;
+    const deadlineMatch = rest.match(/(?:截止|截至)?(?:到|在)?(\d{1,2})月(\d{1,2})[日号]?(?:前|之前|截止|前截止)/);
+    if (deadlineMatch) {
+      const y = Number(todayStr().slice(0, 4));
+      const m = Number(deadlineMatch[1]);
+      const d = Number(deadlineMatch[2]);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        // "X月Y日前" → 有效截止日为 Y-1（例：8月31号前 → 8.30 截止）
+        deadlineDate = addDaysStr(`${y}-${pad2(m)}-${pad2(d)}`, -1);
+        rest = rest.replace(deadlineMatch[0], " ");
+      }
+    }
+
     // 3. 日期（重复规则可自带起始日，如"每周一"）
     const resolvedDate = resolveDate(rest);
     const date = context?.date ?? resolvedDate?.date ?? repeatStart ?? null;
@@ -209,6 +223,9 @@ export const localParser: AIParser = {
     const resolvedTime = resolveTime(rest);
     let time = context?.time ?? resolvedTime.time ?? null;
     if (resolvedTime.time) rest = resolvedTime.rest;
+
+    // 截止任务不设具体时间（全天待办）
+    if (deadlineDate) time = null;
 
     // 无时间待办：明确说"无时间/待办/不限定时间"时，不再追问时间，生成全天待办
     const wantsNoTime = /无时间|没有时间|不限定时间|不定时间|(^|[:：，, ])待办(事项)?/.test(rest);
@@ -224,7 +241,7 @@ export const localParser: AIParser = {
     // 默认起始日期：
     // - 连续 N 天 / 重复规则 → 今天（隐含起始点）
     // - 既没有日期也没有时间 → 识别为待办事项，默认今天，不再追问
-    const startDate = date ?? (repeatDays > 0 || repeat || !time ? todayStr() : null);
+    const startDate = deadlineDate ?? date ?? (repeatDays > 0 || repeat || !time ? todayStr() : null);
 
     // 5. 标题
     const title = context?.title ?? cleanTitle(rest);
@@ -234,10 +251,28 @@ export const localParser: AIParser = {
     if (!title) missing.push("title");
     if (!startDate) missing.push("date");
     // 有时间缺失且已有日期时才追问时间；"无日期无时间"直接按待办处理
-    if (!time && !wantsNoTime && date) missing.push("time");
+    if (!time && !wantsNoTime && !deadlineDate && date) missing.push("time");
 
     let events: ParsedEvent[] = [];
-    if (title && startDate && (time || wantsNoTime || !date)) {
+    if (deadlineDate && title) {
+      const reminders: Array<[string, number]> = [
+        [`距离${title}还有七天`, 7],
+        [`距离${title}还有三天`, 3],
+        [`距离${title}还有一天`, 1],
+        [`今天截止：${title}`, 0],
+      ];
+      for (const [rt, offset] of reminders) {
+        events.push({
+          title: rt,
+          date: addDaysStr(deadlineDate, -offset),
+          time: null,
+          endTime: null,
+          repeat: null,
+          repeatUntil: null,
+          note: `截止：${deadlineDate}`,
+        });
+      }
+    } else if (title && startDate && (time || wantsNoTime || !date)) {
       for (let i = 0; i < (repeatDays > 0 ? repeatDays : 1); i++) {
         events.push({
           title,
@@ -260,6 +295,8 @@ export const localParser: AIParser = {
     } else if (repeat) {
       const repeatNames: Record<string, string> = { daily: "每天", weekly: "每周", monthly: "每月" };
       message = `已为你安排${repeatNames[repeat] ?? repeat}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
+    } else if (deadlineDate) {
+      message = `已为「${title}」生成截止提醒：提前 7 天、3 天、1 天、当天（截止 ${deadlineDate}）。`;
     } else {
       message = "已为你安排好日程，确认后保存。";
     }

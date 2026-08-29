@@ -364,6 +364,37 @@ async function main() {
   const d3 = await api("/api/ai/parse", { method: "POST", body: { text: "晚上八点学习" } });
   check("有时间无日期仍追问日期", d3.data?.result?.missing.includes("date"), JSON.stringify(d3.data?.result));
 
+  console.log("\n20) 截止日期提醒");
+  const dl = await api("/api/ai/parse", { method: "POST", body: { text: "8月31号前完成实验报告" } });
+  const devs = dl.data?.result?.events ?? [];
+  check("截止任务生成4条提醒", devs.length === 4, JSON.stringify(devs));
+  const D = shift("2026-08-31", -1); // "8月31号前" → 有效截止日 8.30
+  check(
+    "提醒日期为截止前7/3/1天和当天",
+    devs[0]?.date === shift(D, -7) &&
+      devs[1]?.date === shift(D, -3) &&
+      devs[2]?.date === shift(D, -1) &&
+      devs[3]?.date === D,
+    JSON.stringify(devs.map((e) => e.date))
+  );
+  check(
+    "提醒标题正确",
+    devs[0]?.title === "距离实验报告还有七天" &&
+      devs[1]?.title === "距离实验报告还有三天" &&
+      devs[2]?.title === "距离实验报告还有一天" &&
+      devs[3]?.title === "今天截止：实验报告",
+    JSON.stringify(devs.map((e) => e.title))
+  );
+  check("全部为无时间待办", devs.every((e) => e.time === null));
+  const dl2 = await api("/api/ai/parse", { method: "POST", body: { text: "8月31号前" } });
+  check("截止任务缺标题时追问", dl2.data?.result?.missing.includes("title"), JSON.stringify(dl2.data?.result));
+  const dl3 = await api("/api/ai/parse", { method: "POST", body: { text: "8月31日开会" } });
+  check(
+    "无'前'字仍是普通日期（追问时间）",
+    dl3.data?.result?.missing.includes("time") && dl3.data?.result?.events?.[0]?.date === "2026-08-31",
+    JSON.stringify(dl3.data?.result)
+  );
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

@@ -10,7 +10,8 @@
     "start": "pnpm --dir frontend start",
     "lint": "pnpm --dir frontend lint",
     "test:smoke": "node scripts/smoke-test.mjs",
-    "test:ui": "node scripts/ui-render-check.mjs"
+    "test:ui": "node scripts/ui-render-check.mjs",
+    "test:parser": "node scripts/parser-cases.mjs"
   },
   "engines": {
     "node": ">=22.5.0"

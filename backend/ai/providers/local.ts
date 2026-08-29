@@ -138,13 +138,20 @@ export function resolveTime(text: string): { time: string | null; endTime: strin
 }
 
 /** 清洗标题：去掉口语前缀和标点 */
-function cleanTitle(raw: string): string {
+export function cleanTitle(raw: string): string {
   return raw
     .replace(/^\s*(我要|我想|帮我|请|安排一下|安排|预约|定个|记下|添加|加上|从|开始|进行|去|来做|去做|准备|组织|参加|完成)/, "")
     .replace(/[。！？!?，,；;]/g, " ")
     .replace(/^[:：,，、;；\s]+/, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** 是否截止类语句（"X月Y日前/之前完成XX"），这类语句必须走确定性本地规则生成提醒 */
+export function isDeadlineSentence(text: string): boolean {
+  return /(?:截止|截至)?(?:到|在)?[零一二两三四五六七八九十\d]{1,3}月[零一二两三四五六七八九十\d]{1,3}[日号]?(?:前|之前|截止|前截止)/.test(
+    text
+  );
 }
 
 export const localParser: AIParser = {

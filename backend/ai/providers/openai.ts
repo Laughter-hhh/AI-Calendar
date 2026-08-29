@@ -1,6 +1,6 @@
 // OpenAI 兼容解析器：任何兼容 /chat/completions 的服务都可以接入
 import type { AIParser, ParseContext, ParseResult } from "../types";
-import { resolveDate, resolveTime } from "./local";
+import { cleanTitle, resolveDate, resolveTime } from "./local";
 import { todayStr } from "../date-utils";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
@@ -28,7 +28,8 @@ export class OpenAICompatibleParser implements AIParser {
       "2. 时间必须输出严格 24 小时制 HH:mm（例如 08:30、15:00），全天事件用 null；",
       "3. 日期/时间都缺失时，才把缺失字段名（title/date/time）放入 missing；",
       "4. '连续N天' 生成 N 个日期连续的事件；",
-      "5. 只输出 JSON，不要输出任何其他文字。",
+      "5. 如果用户说'X月Y日前/之前完成XX'这类截止任务：返回 4 个事件（截止前7/3/1天和当天，标题分别为'距离XX还有七天/三天/一天'和'今天截止：XX'，截止日为 Y-1，均无时间）；",
+      "6. 只输出 JSON，不要输出任何其他文字。",
       "输出格式：",
       '{"events":[{"title":"","date":"YYYY-MM-DD","time":"HH:mm或null","endTime":"HH:mm或null","note":"","repeat":null,"repeatUntil":null}],"missing":[],"message":"给用户的一句话"}',
       "示例：",
@@ -80,6 +81,7 @@ export class OpenAICompatibleParser implements AIParser {
 function normalizeResult(result: ParseResult): ParseResult {
   const events = (result.events ?? []).map((ev) => {
     const out = { ...ev };
+    if (out.title) out.title = cleanTitle(out.title);
     if (out.date && !/^\d{4}-\d{2}-\d{2}$/.test(out.date)) {
       const d = resolveDate(out.date);
       if (d) out.date = d.date;

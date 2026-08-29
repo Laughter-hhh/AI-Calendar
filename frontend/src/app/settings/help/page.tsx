@@ -37,6 +37,15 @@ export default function HelpPage() {
       </section>
 
       <section className={`${section} mt-3`}>
+        <h2 className={h}>笔记本（不确定时间的事）</h2>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-zinc-600">
+          <li>把“不知道什么时候做、但要做”的事记在笔记本里，不占用日历</li>
+          <li>主界面点 ⋯ 菜单 → “笔记本”即可进入</li>
+          <li>确定时间后点“⏰ 转为日程”，AI 会理解这句话并预览，确认后自动加入日历并从笔记本移出</li>
+        </ul>
+      </section>
+
+      <section className={`${section} mt-3`}>
         <h2 className={h}>语音输入</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-zinc-600">
           <li>桌面 Chrome/Edge：点输入框旁麦克风直接说话</li>

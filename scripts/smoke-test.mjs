@@ -441,6 +441,33 @@ async function main() {
   const allowed = ["red", "orange", "amber", "green", "blue", "purple", "pink"];
   check("未指定颜色时自动分配非灰色", typeof rcColor === "string" && allowed.includes(rcColor), JSON.stringify(rc.data));
 
+  console.log("\n22) 笔记本");
+  const n1 = await api("/api/notes", { method: "POST", body: { text: "不确定什么时候做：去配眼镜" } });
+  const n1Id = n1.data?.note?.id;
+  check("添加笔记本条目成功", n1.status === 201 && n1Id !== undefined && n1.data?.note?.text === "不确定什么时候做：去配眼镜", JSON.stringify(n1.data));
+  const nEmpty = await api("/api/notes", { method: "POST", body: { text: "   " } });
+  check("空内容添加返回 400", nEmpty.status === 400, `status=${nEmpty.status}`);
+  const n2 = await api("/api/notes", { method: "POST", body: { text: "整理相册" } });
+  check("再添加一条成功", n2.status === 201 && n2.data?.note?.id !== undefined, JSON.stringify(n2.data));
+  const nList = await api("/api/notes");
+  check("笔记本列表包含两条", nList.status === 200 && nList.data?.notes?.length === 2, JSON.stringify(nList.data));
+  check("未完成的排在前面", nList.data?.notes?.[0]?.done === false);
+  const nDone = await api(`/api/notes/${n1Id}`, { method: "PATCH", body: { done: true } });
+  check("标记完成成功", nDone.status === 200 && nDone.data?.note?.done === true, JSON.stringify(nDone.data));
+  const nList2 = await api("/api/notes");
+  check("已完成的排到后面", nList2.data?.notes?.[0]?.id !== n1Id && nList2.data?.notes?.[1]?.id === n1Id, JSON.stringify(nList2.data?.notes?.map((n) => n.id)));
+  const nEdit = await api(`/api/notes/${n2.data?.note?.id}`, { method: "PATCH", body: { text: "整理旧照片" } });
+  check("编辑文字成功", nEdit.status === 200 && nEdit.data?.note?.text === "整理旧照片", JSON.stringify(nEdit.data));
+  const nDel = await api(`/api/notes/${n1Id}`, { method: "DELETE" });
+  check("删除成功", nDel.status === 200 && nDel.data?.ok === true, JSON.stringify(nDel.data));
+  const nDel404 = await api(`/api/notes/${n1Id}`, { method: "DELETE" });
+  check("重复删除返回 404", nDel404.status === 404, `status=${nDel404.status}`);
+  const nList3 = await api("/api/notes");
+  check("删除后列表只剩一条", nList3.data?.notes?.length === 1, JSON.stringify(nList3.data));
+  cookie = "";
+  const nAnon = await api("/api/notes");
+  check("未登录访问笔记本返回 401", nAnon.status === 401, `status=${nAnon.status}`);
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

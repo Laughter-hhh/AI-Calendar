@@ -32,6 +32,9 @@ export default async function SettingsPage() {
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-zinc-800">功能</h2>
         <div className="mt-2 flex flex-col gap-2 text-sm">
+          <a href="/notes" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
+            📒 笔记本（记录不确定时间要做的待办）
+          </a>
           <a href="/settings/help" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
             ❓ 帮助与使用说明
           </a>

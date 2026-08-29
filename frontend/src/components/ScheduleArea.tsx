@@ -194,6 +194,9 @@ export default function ScheduleArea({
             >
             🔍 搜索日程
             </button>
+            <a href="/notes" className={menuItem}>
+              📒 笔记本（不确定时间的事）
+            </a>
             <div className="flex items-center gap-2 px-3 py-1">
               <span className="flex-1" />
               <ExportButton from={exportFrom} to={exportTo} />

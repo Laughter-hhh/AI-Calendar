@@ -58,6 +58,14 @@ CREATE TABLE IF NOT EXISTS calendar_shares (
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (owner_user_id, viewer_user_id)
 );
+CREATE TABLE IF NOT EXISTS notes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text       TEXT NOT NULL,
+  done       INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id, done, created_at);
 `;
 
 /** 兼容旧数据库：给已存在的 events 表补上新增的列 */

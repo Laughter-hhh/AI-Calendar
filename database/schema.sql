@@ -49,3 +49,13 @@ CREATE TABLE IF NOT EXISTS calendar_shares (
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (owner_user_id, viewer_user_id)
 );
+
+-- 笔记本：记录"不确定什么时候做、但需要做的事"（不占用日历，时间确定后可转为日程）
+CREATE TABLE IF NOT EXISTS notes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text       TEXT NOT NULL,
+  done       INTEGER NOT NULL DEFAULT 0,   -- 0=未完成 1=已完成
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id, done, created_at);

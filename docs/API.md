@@ -95,6 +95,34 @@
 
 `DELETE /api/events/:id?mode=single&date=YYYY-MM-DD` → 仅删除重复事件中该日期的一次出现（其余保留）。
 
+## 笔记本
+
+笔记本用于记录"不确定什么时候做、但需要做的事"，条目不是日程（无日期无时间）。
+
+### 查询列表
+
+`GET /api/notes` → `{ "notes": [...] }`
+
+未完成在前、新的在前。条目字段：`id / text / done / createdAt`。
+
+### 新增
+
+`POST /api/notes`
+
+```json
+{ "text": "不确定什么时候做：去配眼镜" }
+```
+
+成功：`201 { "note": { "id": 1, "text": "...", "done": false, "createdAt": "" } }`。空内容返回 400，最多 500 字。
+
+### 修改
+
+`PATCH /api/notes/:id`，可传 `text` / `done`（布尔）之一或两者 → `{ "note": {...} }`。
+
+### 删除
+
+`DELETE /api/notes/:id` → `{ "ok": true }`；不存在返回 404。
+
 ## AI
 
 ### 自然语言创建日程

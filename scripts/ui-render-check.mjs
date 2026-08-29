@@ -123,6 +123,19 @@ async function main() {
     `status=${helpPage.status}`
   );
 
+  const notesPage = await api("/notes");
+  check(
+    "笔记本页返回 200 且含说明与入口",
+    notesPage.status === 200 &&
+      notesPage.text.includes("笔记本") &&
+      notesPage.text.includes("返回日历") &&
+      notesPage.text.includes("不确定什么时候做"),
+    `status=${notesPage.status}`
+  );
+  await api("/api/notes", { method: "POST", body: { text: "界面测试：学做咖啡" } });
+  const notesPage2 = await api("/notes");
+  check("笔记本页显示刚添加的条目", notesPage2.status === 200 && notesPage2.text.includes("界面测试：学做咖啡"), `status=${notesPage2.status}`);
+
   if (failures.length === 0) {
     console.log("\n🎉 页面渲染检查全部通过");
   } else {

@@ -31,7 +31,7 @@ AI Calendar 是一个 **AI 原生的个人时间管理助手**：用户用自然
 | 后端 | Next.js Server API（Route Handlers，位于 `frontend/src/app/api/`） |
 | 数据库 | Node.js 内置 SQLite（`node:sqlite`），单文件，无需额外安装 |
 | 认证 | 邮箱 + 密码（scrypt 加盐哈希）+ 服务端会话（随机 token 存 Cookie） |
-| AI 服务层 | `backend/ai/`：本地规则解析器（默认）+ OpenAI 兼容接口（可选） |
+| AI 服务层 | `backend/ai/`：模型理解并标准化（可选）+ 本地规则解析器执行（默认/兜底） |
 | 手机 App | `mobile/`：Expo (React Native) + react-native-webview 壳 |
 | 部署 | `.github/workflows/deploy.yml`：CI 构建 standalone 产物 → scp 上传 → pm2 重启 |
 
@@ -150,7 +150,7 @@ AI-Calendar/
 | POST | /api/events | 创建日程 | 登录 |
 | PATCH | /api/events/:id | 修改 | 登录（本人） |
 | DELETE | /api/events/:id | 删除 | 登录（本人） |
-| POST | /api/ai/parse | 自然语言解析（创建日程） | 登录 |
+| POST | /api/ai/parse | 自然语言 → 模型标准化 → 本地规则生成日程 | 登录 |
 | POST | /api/ai/action | 自然语言修改/删除日程 | 登录 |
 | POST | /api/ai/stt | 语音转文字（录音上传，需配置 Key） | 登录 |
 | GET | /api/version | 当前版本号（自动更新检测） | 公开 |
@@ -223,6 +223,7 @@ pnpm test:ui             # 或 BASE_URL=... node scripts/ui-render-check.mjs
   | v4.3.2 | 2026-08-29 | 新建日程自动随机非灰色颜色 | `v4.3.2` |
   | v4.3.3 | 2026-08-29 | 日期/截止支持中文数字（八月三十一之前） | `v4.3.3` |
   | v4.3.4 | 2026-08-29 | 截止语句强制本地规则（配置 AI 也生效）+ 常用语句测试套件 | `v4.3.4` |
+  | v4.3.5 | 2026-08-29 | 解析架构升级：模型理解 → 标准句式 → 本地规则执行 | `v4.3.5` |
 
 ## 12. 待拓展与待确认（摘要）
 

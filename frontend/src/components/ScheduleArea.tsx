@@ -113,17 +113,6 @@ export default function ScheduleArea({
           .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0] ?? null)
       : null;
 
-  async function quickTodo() {
-    const title = window.prompt("待办事项内容（无时间，默认全天）：");
-    if (!title?.trim()) return;
-    await fetch("/api/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title.trim(), date, time: null }),
-    });
-    void load(date, view);
-  }
-
   const menuItem =
     "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-100";
 
@@ -203,17 +192,8 @@ export default function ScheduleArea({
                 setSearchOpen(true);
               }}
             >
-              🔍 搜索日程
-            </button>
-            <button
-              className={menuItem}
-              onClick={() => {
-                setMenuOpen(false);
-                void quickTodo();
-              }}
-            >
-              ＋ 添加待办
-            </button>
+            🔍 搜索日程
+          </button>
             <div className="flex items-center gap-2 px-3 py-1">
               <span className="text-sm text-zinc-700">⇩ 导出 / ⇧ 导入</span>
               <ExportButton from={exportFrom} to={exportTo} />

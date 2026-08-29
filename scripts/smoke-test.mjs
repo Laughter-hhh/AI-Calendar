@@ -347,6 +347,23 @@ async function main() {
     JSON.stringify(t3.data?.result)
   );
 
+  console.log("\n19) 无日期无时间自动识别为待办");
+  const d1 = await api("/api/ai/parse", { method: "POST", body: { text: "交报告" } });
+  const de1 = d1.data?.result?.events?.[0];
+  check(
+    "只写标题（无日期无时间）识别为当天待办",
+    de1?.title === "交报告" && de1?.time === null && de1?.date === todayStr(0) && d1.data?.result?.missing.length === 0,
+    JSON.stringify(d1.data?.result)
+  );
+  const d2 = await api("/api/ai/parse", { method: "POST", body: { text: "明天交报告" } });
+  check(
+    "有日期无时间仍追问时间",
+    d2.data?.result?.missing.includes("time") && d2.data?.result?.events?.[0]?.date === todayStr(1),
+    JSON.stringify(d2.data?.result)
+  );
+  const d3 = await api("/api/ai/parse", { method: "POST", body: { text: "晚上八点学习" } });
+  check("有时间无日期仍追问日期", d3.data?.result?.missing.includes("date"), JSON.stringify(d3.data?.result));
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

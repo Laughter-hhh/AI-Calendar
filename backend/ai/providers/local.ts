@@ -205,9 +205,6 @@ export const localParser: AIParser = {
     const date = context?.date ?? resolvedDate?.date ?? repeatStart ?? null;
     if (resolvedDate) rest = resolvedDate.rest;
 
-    // 连续 N 天或重复规则时，默认从今天开始（隐含起始点，符合直觉）
-    const startDate = date ?? (repeatDays > 0 || repeat ? todayStr() : null);
-
     // 4. 时间
     const resolvedTime = resolveTime(rest);
     let time = context?.time ?? resolvedTime.time ?? null;
@@ -224,6 +221,11 @@ export const localParser: AIParser = {
       time = null;
     }
 
+    // 默认起始日期：
+    // - 连续 N 天 / 重复规则 → 今天（隐含起始点）
+    // - 既没有日期也没有时间 → 识别为待办事项，默认今天，不再追问
+    const startDate = date ?? (repeatDays > 0 || repeat || !time ? todayStr() : null);
+
     // 5. 标题
     const title = context?.title ?? cleanTitle(rest);
 
@@ -231,10 +233,11 @@ export const localParser: AIParser = {
     const missing: string[] = [];
     if (!title) missing.push("title");
     if (!startDate) missing.push("date");
-    if (!time && !wantsNoTime) missing.push("time");
+    // 有时间缺失且已有日期时才追问时间；"无日期无时间"直接按待办处理
+    if (!time && !wantsNoTime && date) missing.push("time");
 
     let events: ParsedEvent[] = [];
-    if (title && startDate && (time || wantsNoTime)) {
+    if (title && startDate && (time || wantsNoTime || !date)) {
       for (let i = 0; i < (repeatDays > 0 ? repeatDays : 1); i++) {
         events.push({
           title,

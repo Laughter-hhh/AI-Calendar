@@ -107,10 +107,20 @@ async function main() {
   check(
     "设置页返回 200 且含功能入口与版本",
     settingsPage.status === 200 &&
+      settingsPage.text.includes("帮助") &&
       settingsPage.text.includes("共享日历") &&
       settingsPage.text.includes("下载安卓 App") &&
       settingsPage.text.includes("版本"),
     `status=${settingsPage.status}`
+  );
+  const helpPage = await api("/settings/help");
+  check(
+    "帮助页返回 200 且含使用说明",
+    helpPage.status === 200 &&
+      helpPage.text.includes("快速上手") &&
+      helpPage.text.includes("截止提醒") &&
+      helpPage.text.includes("常见问题"),
+    `status=${helpPage.status}`
   );
 
   if (failures.length === 0) {

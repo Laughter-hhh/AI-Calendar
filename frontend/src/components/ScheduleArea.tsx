@@ -193,9 +193,9 @@ export default function ScheduleArea({
               }}
             >
             🔍 搜索日程
-          </button>
+            </button>
             <div className="flex items-center gap-2 px-3 py-1">
-              <span className="text-sm text-zinc-700">⇩ 导出 / ⇧ 导入</span>
+              <span className="flex-1" />
               <ExportButton from={exportFrom} to={exportTo} />
               <ImportButton />
             </div>

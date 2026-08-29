@@ -77,6 +77,18 @@ async function main() {
   r = await parse("九月一号之前交总结");
   check("中文数字含号截止 → 截止 8.31", r.result.events?.length === 4 && r.result.events[3].date === "2026-08-31", JSON.stringify(r.result));
 
+  const sep1 = `${new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear()}-09-01`;
+  r = await parse("九月一号领取美团骑行卡");
+  check(
+    "九月一号领取美团骑行卡 → 识别日期并追问时间（含无时间提示）",
+    r.result.events?.[0]?.date === sep1 &&
+      r.result.events?.[0]?.title === "领取美团骑行卡" &&
+      r.result.missing?.length === 1 &&
+      r.result.missing[0] === "time" &&
+      r.result.message?.includes("无时间"),
+    JSON.stringify(r.result)
+  );
+
   r = await parse("交报告");
   check("交报告 → 当天待办", r.result.events?.length === 1 && r.result.events[0].time === null && r.result.events[0].date === todayStr(0) && r.result.missing.length === 0, JSON.stringify(r.result));
 

@@ -298,7 +298,18 @@ export const localParser: AIParser = {
     let message: string;
     if (missing.length > 0) {
       const names: Record<string, string> = { title: "做什么", date: "哪天", time: "几点" };
-      message = `还差一点信息：${missing.map((k) => names[k]).join("、")}。请告诉我。`;
+      // 先回显已识别到的信息，避免用户误以为系统没听懂（例：九月一号领取美团骑行卡）
+      const recognized: string[] = [];
+      if (title) recognized.push(`「${title}」`);
+      if (startDate) recognized.push(startDate);
+      if (time) recognized.push(time);
+      const echo = recognized.length > 0 ? `已识别：${recognized.join(" ")}。` : "";
+      // 只缺时间时，提示可用"无时间/待办"创建全天待办
+      const hint =
+        missing.length === 1 && missing[0] === "time" && !deadlineDate
+          ? "如果没有具体时间，回复“无时间”或“待办”可创建全天待办。"
+          : "";
+      message = `${echo}还差一点信息：${missing.map((k) => names[k]).join("、")}。请告诉我。${hint}`;
     } else if (repeatDays > 0) {
       message = `已为你安排从 ${startDate} 起连续 ${repeatDays} 天的日程。`;
     } else if (repeat) {

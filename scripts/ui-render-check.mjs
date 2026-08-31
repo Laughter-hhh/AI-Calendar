@@ -43,10 +43,15 @@ async function main() {
 
   const notesSource = await readFile(new URL("../frontend/src/components/NotesPanel.tsx", import.meta.url), "utf8");
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
+  const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
   check(
     "日历菜单使用客户端导航打开笔记本",
     scheduleSource.includes('<Link') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')
+  );
+  check(
+    "移动端右侧左滑返回上一级",
+    swipeSource.includes("touchstart") && swipeSource.includes("touchend") && swipeSource.includes("router.back()")
   );
 
   const email = `ui-${Date.now()}@test.local`;

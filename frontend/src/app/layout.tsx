@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import OfflineRegistrar from "@/components/OfflineRegistrar";
+import SwipeBack from "@/components/SwipeBack";
 import VersionChecker from "@/components/VersionChecker";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN">
       <body className="min-h-screen antialiased">
         <OfflineRegistrar />
+        <SwipeBack />
         <VersionChecker />
         {children}
       </body>

@@ -20,8 +20,8 @@ export default function HelpPage() {
       <section className={`${section} mt-3`}>
         <h2 className={h}>三种视图</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-zinc-600">
-          <li><b>日</b>：单日事项——定时日程 + 无时间待办分段</li>
-          <li><b>周</b>：时间安排——连续 7 天时间轴，不同任务用不同颜色时间块</li>
+          <li><b>日</b>：可在“事项 / 时间线”间直接切换；重叠时间段自动并排</li>
+          <li><b>周</b>：连续 7 天时间轴，不同任务用不同颜色时间块，重叠任务并排</li>
           <li><b>月</b>：月历网格，点某天跳转单日</li>
         </ul>
       </section>
@@ -62,9 +62,12 @@ export default function HelpPage() {
 
       <section className={`${section} mt-3`}>
         <h2 className={h}>导入 / 导出</h2>
-        <p className="mt-2 text-sm text-zinc-600">
-          在主界面点 ⋯ 菜单 → “导出 / 导入”，支持 .ics 格式（可与 Google Calendar、Apple 日历、Outlook 互通）。
-        </p>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-zinc-600">
+          <li>在主界面点 ⋯ 菜单 → “导出 / 导入”</li>
+          <li>导入支持 UTF-8 `.ics` 文件（Google Calendar、Apple 日历、Outlook）</li>
+          <li>导入前会显示新增、重复和失败数量；确认后只追加，绝不修改或删除原有日程</li>
+          <li>同一文件再次导入时按外部 UID 跳过重复项</li>
+        </ul>
       </section>
 
       <section className={`${section} mt-3`}>

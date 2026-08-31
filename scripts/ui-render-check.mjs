@@ -46,9 +46,13 @@ async function main() {
   const tomorrow = todayStr(1);
   const created = await api("/api/events", {
     method: "POST",
-    body: { title: "界面测试日程", date: tomorrow, time: "09:30" },
+    body: { title: "界面测试日程", date: tomorrow, time: "09:30", endTime: "10:30" },
   });
   check("为明天创建日程成功", created.status === 201);
+  await api("/api/events", {
+    method: "POST",
+    body: { title: "重叠界面测试", date: tomorrow, time: "10:00", endTime: "11:00" },
+  });
 
   const datePage = await api(`/?date=${tomorrow}`);
   check("日期页返回 200", datePage.status === 200, `status=${datePage.status}`);
@@ -63,12 +67,14 @@ async function main() {
       datePage.text.includes(">月<")
   );
   check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
+  check("日视图包含事项/时间线切换", datePage.text.includes(">事项<") && datePage.text.includes(">时间线<"));
 
   const weekPage = await api(`/?date=${tomorrow}&view=week`);
   check("时间安排页返回 200 且含标题与时间刻度", weekPage.status === 200 && weekPage.text.includes("时间安排") && weekPage.text.includes("6:00"), `status=${weekPage.status}`);
   check("周视图页面显示该日程", weekPage.text.includes("界面测试日程"));
+  check("周视图重叠日程并排显示", weekPage.text.includes('data-timeline-columns="2"'));
 
-  const monthPage = await api(`/?date=${todayStr(0)}&view=month`);
+  const monthPage = await api(`/?date=${tomorrow}&view=month`);
   check(
     "月视图页面返回 200 且含月份切换按钮",
     monthPage.status === 200 && monthPage.text.includes("上月") && monthPage.text.includes("下月"),

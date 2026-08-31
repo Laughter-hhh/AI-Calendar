@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
-import { dateLabel, isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
 import { fetchCachedJson, isOnline } from "@/lib/offline";
 import DateNav from "./DateNav";
@@ -11,6 +11,7 @@ import SearchBar from "./SearchBar";
 import EventList from "./EventList";
 import ExportButton from "./ExportButton";
 import ImportButton from "./ImportButton";
+import DayTimelineView from "./DayTimelineView";
 
 const WeekView = dynamic(() => import("./WeekView"), { ssr: true });
 const MonthView = dynamic(() => import("./MonthView"), { ssr: true });
@@ -31,11 +32,13 @@ export default function ScheduleArea({
   initialView,
   initialQuery,
   initialEvents,
+  initialCurrentTime,
 }: {
   initialDate: string;
   initialView: View;
   initialQuery: string;
   initialEvents: CalendarEvent[];
+  initialCurrentTime: string;
 }) {
   const [date, setDate] = useState(initialDate);
   const [view, setView] = useState<View>(initialView);
@@ -45,6 +48,7 @@ export default function ScheduleArea({
   const [offline, setOffline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(initialQuery !== "");
+  const [dayMode, setDayMode] = useState<"list" | "timeline">("list");
 
   const load = useCallback(async (d: string, v: View) => {
     setLoading(true);
@@ -105,11 +109,10 @@ export default function ScheduleArea({
   }
 
   const today = todayStr();
-  const now = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(11, 16);
   const upcoming =
     view === "day" && date === today
       ? (events
-          .filter((e) => e.startTime && e.startTime >= now)
+          .filter((e) => e.startTime && e.startTime >= initialCurrentTime)
           .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0] ?? null)
       : null;
 
@@ -163,6 +166,25 @@ export default function ScheduleArea({
         </p>
       )}
 
+      {view === "day" && (
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs text-zinc-400">{events.length} 项</span>
+          <div className="flex rounded-lg bg-zinc-200/70 p-0.5" aria-label="单日显示方式">
+            {(["list", "timeline"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setDayMode(mode)}
+                className={`rounded-md px-3 py-1 text-xs ${
+                  dayMode === mode ? "bg-white font-medium text-zinc-800 shadow-sm" : "text-zinc-500"
+                }`}
+              >
+                {mode === "list" ? "事项" : "时间线"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
         {view === "month" ? (
           <MonthView
@@ -174,8 +196,15 @@ export default function ScheduleArea({
           />
         ) : view === "week" ? (
           <WeekView initialEvents={events} startDate={date} query={query} onSelectDay={(d) => navigate(d, "day")} />
+        ) : dayMode === "timeline" ? (
+          <DayTimelineView events={events} query={query} />
         ) : (
-          <EventList initialEvents={events} date={date} isToday={date === today} query={query} />
+          <EventList
+            events={events}
+            isToday={date === today}
+            query={query}
+            onRefresh={() => load(date, "day")}
+          />
         )}
       </div>
 

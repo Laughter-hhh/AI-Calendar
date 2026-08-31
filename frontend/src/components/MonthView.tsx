@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { CalendarEvent } from "@/lib/events";
-import { shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { shiftMonth, todayStr } from "@/lib/date";
 import { colorDot } from "@/lib/colors";
 
 function monthStartOf(dateStr: string): string {
@@ -37,15 +37,9 @@ export default function MonthView({
 }) {
   // 单一数据源：当前月份完全由 startDate（URL/父组件）决定，不做内部导航与请求
   const month = monthStartOf(startDate);
-  const [events, setEvents] = useState(initialEvents);
-
-  useEffect(() => {
-    setEvents(initialEvents);
-  }, [initialEvents]);
-
   const grouped = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
-    for (const ev of events) {
+    for (const ev of initialEvents) {
       if (!matchesQuery(ev, query)) continue;
       const list = map.get(ev.date) ?? [];
       list.push(ev);
@@ -55,7 +49,7 @@ export default function MonthView({
       list.sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
     }
     return map;
-  }, [events, query]);
+  }, [initialEvents, query]);
 
   const total = daysInMonth(month);
   const lead = weekdayOfMonthStart(month);
@@ -108,17 +102,19 @@ export default function MonthView({
             <button
               key={day}
               onClick={() => onSelectDay(day)}
-              className={`flex min-h-[3.6rem] flex-col items-stretch gap-0.5 bg-white p-0.5 text-left align-top hover:bg-zinc-50 md:min-h-[5.2rem] ${
+              className={`flex min-h-[3.6rem] flex-col items-stretch gap-0.5 bg-white p-0.5 text-left align-top hover:bg-zinc-50 md:min-h-[6.4rem] ${
                 isToday ? "bg-zinc-100" : ""
               }`}
             >
               <span className={`px-0.5 text-xs ${isToday ? "font-bold text-zinc-900" : "text-zinc-600"}`}>
                 {Number(day.slice(8, 10))}
               </span>
-              {dayEvents.slice(0, 2).map((ev) => (
+              {dayEvents.slice(0, 4).map((ev, index) => (
                 <span
                   key={`${ev.id}-${day}`}
                   className={`truncate rounded bg-zinc-100 px-0.5 py-px text-[10px] leading-3 md:text-xs ${
+                    index >= 2 ? "hidden md:block" : ""
+                  } ${
                     ev.done ? "text-zinc-400 line-through" : "text-zinc-600"
                   }`}
                 >
@@ -128,7 +124,10 @@ export default function MonthView({
                 </span>
               ))}
               {dayEvents.length > 2 && (
-                <span className="px-0.5 text-[10px] text-zinc-400">+{dayEvents.length - 2}</span>
+                <span className="px-0.5 text-[10px] text-zinc-400 md:hidden">+{dayEvents.length - 2}</span>
+              )}
+              {dayEvents.length > 4 && (
+                <span className="hidden px-0.5 text-[10px] text-zinc-400 md:block">+{dayEvents.length - 4}</span>
               )}
             </button>
           );

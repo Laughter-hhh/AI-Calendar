@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS events (
   color       TEXT,            -- 分类颜色：red/orange/green/blue/purple（可空）
   done        INTEGER NOT NULL DEFAULT 0,  -- 是否已完成：0=否 1=是
   source_text TEXT,            -- 用户输入的原始自然语言，便于追溯和优化
+  external_uid TEXT,           -- 外部导入事件的稳定标识；用于重复导入时跳过，不覆盖原日程
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, event_date);

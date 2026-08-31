@@ -2,6 +2,7 @@
 import { getDb } from "./db";
 import { shiftDate } from "./date";
 import { EVENT_COLORS } from "./colors";
+import { assertValidEventTiming } from "./event-validation";
 
 export interface CalendarEvent {
   id: number;
@@ -30,6 +31,11 @@ export interface NewEvent {
   color?: string | null;
   done?: boolean;
   sourceText?: string | null;
+  externalUid?: string | null;
+}
+
+export interface ImportedEvent extends NewEvent {
+  externalUid: string;
 }
 
 function mapRow(row: Record<string, unknown>): CalendarEvent {
@@ -210,12 +216,13 @@ export function listEventsRange(userId: number, from: string, to: string): Calen
 }
 
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {
+  assertValidEventTiming(data.time, data.endTime ?? null);
   // 未指定颜色时，自动随机分配一个非灰色（跳过 EVENT_COLORS 第一项"无"）
   const color = data.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
   const info = getDb()
     .prepare(
-      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       userId,
@@ -228,7 +235,8 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
       data.repeatUntil ?? null,
       color,
       data.done ? 1 : 0,
-      data.sourceText ?? null
+      data.sourceText ?? null,
+      data.externalUid ?? null
     );
   return {
     id: Number(info.lastInsertRowid),
@@ -243,6 +251,71 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
     done: data.done === true,
     sourceText: data.sourceText ?? null,
   };
+}
+
+/** 查询已导入的外部 UID，供导入预览使用；只看当前用户，不触碰原日程。 */
+export function existingExternalUids(userId: number, uids: string[]): Set<string> {
+  const unique = [...new Set(uids.filter(Boolean))];
+  if (unique.length === 0) return new Set();
+  const placeholders = unique.map(() => "?").join(", ");
+  const rows = getDb()
+    .prepare(`SELECT external_uid FROM events WHERE user_id = ? AND external_uid IN (${placeholders})`)
+    .all(userId, ...unique) as unknown as Array<{ external_uid: string }>;
+  return new Set(rows.map((row) => String(row.external_uid)));
+}
+
+/**
+ * 原子批量导入：只插入尚未出现的 externalUid。
+ * 不执行 UPDATE/DELETE，因此不会改变用户已有日程；整个批次失败时全部回滚。
+ */
+export function importEvents(userId: number, events: ImportedEvent[]): { imported: number; duplicates: number } {
+  for (const event of events) assertValidEventTiming(event.time, event.endTime ?? null);
+  const db = getDb();
+  const known = existingExternalUids(userId, events.map((event) => event.externalUid));
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO events
+      (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  let imported = 0;
+  let duplicates = 0;
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const event of events) {
+      if (known.has(event.externalUid)) {
+        duplicates += 1;
+        continue;
+      }
+      const color = event.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
+      const result = insert.run(
+        userId,
+        event.title.trim(),
+        event.date,
+        event.time ?? null,
+        event.endTime ?? null,
+        event.note ?? null,
+        event.repeat ?? null,
+        event.repeatUntil ?? null,
+        color,
+        event.done ? 1 : 0,
+        event.sourceText ?? null,
+        event.externalUid
+      );
+      if (result.changes > 0) {
+        imported += 1;
+        known.add(event.externalUid);
+      } else {
+        duplicates += 1;
+      }
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  return { imported, duplicates };
 }
 
 export function updateEvent(
@@ -267,7 +340,9 @@ export function updateEvent(
     color: data.color !== undefined ? data.color : (existing.color as string | null),
     done: data.done !== undefined ? data.done === true : Number(existing.done) === 1,
     sourceText: data.sourceText !== undefined ? data.sourceText : (existing.source_text as string | null),
+    externalUid: existing.external_uid as string | null,
   };
+  assertValidEventTiming(merged.time, merged.endTime);
 
   db.prepare(
     `UPDATE events

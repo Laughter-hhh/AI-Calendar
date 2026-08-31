@@ -21,3 +21,4 @@ frontend/bundle/
 .DS_Store
 Thumbs.db
 *.log
+.codex-tmp/

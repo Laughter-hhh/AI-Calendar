@@ -62,7 +62,13 @@
 
 ### 导入 .ics
 
-`POST /api/events/import`，body：`{ "content": "<ics 文本>" }` → `{ "imported": n, "failed": m, "skipped": k }`。单次上限 200 条。
+`POST /api/events/import`，body：`{ "content": "<ics 文本>", "mode": "preview" | "import" }`。
+
+- `preview`：只解析，不写数据库；返回 `ready / duplicates / failed / skipped / preview`
+- `import`（默认）：原子批量追加，返回 `imported / duplicates / failed / skipped`
+- 导入策略固定为 `append-only`：不更新、不删除已有日程；同一外部 UID 或文件内重复项会跳过
+- 兼容全天、浮动时间、UTC `Z`、常见 `TZID`、简单 RRULE（每天/每周/每月）与 ICS 折行；单次上限 1000 条、5MB
+- 复杂 RRULE、EXDATE/RDATE、跨日结束时间会在预览中警告；无法等价表达的复杂重复只导入首个日期
 
 ### 创建
 

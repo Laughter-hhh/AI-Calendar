@@ -7,12 +7,23 @@ export function todayStr(): string {
   return new Date(Date.now() + CHINA_OFFSET_MS).toISOString().slice(0, 10);
 }
 
+/** 当前中国时区时间，格式 HH:mm。 */
+export function currentTimeStr(): string {
+  return new Date(Date.now() + CHINA_OFFSET_MS).toISOString().slice(11, 16);
+}
+
 /** 校验日期字符串格式 YYYY-MM-DD */
 export function isValidDateStr(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const [y, m, d] = s.split("-").map(Number);
   if (m < 1 || m > 12 || d < 1 || d > 31) return false;
-  return !Number.isNaN(new Date(Date.UTC(y, m - 1, d)).getTime());
+  const parsed = new Date(Date.UTC(y, m - 1, d));
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.getUTCFullYear() === y &&
+    parsed.getUTCMonth() === m - 1 &&
+    parsed.getUTCDate() === d
+  );
 }
 
 /** 日期字符串加减天数，返回 YYYY-MM-DD */

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { CalendarEvent } from "@/lib/events";
 import { dateLabel, shiftDate, todayStr } from "@/lib/date";
+import { layoutOverlappingEvents } from "@/lib/timeline";
 
 // 时间安排视图：连续 7 天 × 时间块（6:00 - 23:00）
 const START_HOUR = 6;
@@ -19,11 +20,6 @@ const BLOCK_COLORS: Record<string, string> = {
   purple: "bg-violet-500/90 border-violet-600 text-white",
   pink: "bg-pink-500/90 border-pink-600 text-white",
 };
-
-function toMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
 
 function shortLabel(d: string): string {
   const label = dateLabel(d);
@@ -45,17 +41,12 @@ export default function WeekView({
   query: string;
   onSelectDay: (day: string) => void;
 }) {
-  const [events, setEvents] = useState(initialEvents);
-  useEffect(() => {
-    setEvents(initialEvents);
-  }, [initialEvents]);
-
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => shiftDate(startDate, i)),
     [startDate]
   );
   const today = todayStr();
-  const visible = events.filter((e) => matchesQuery(e, query));
+  const visible = initialEvents.filter((e) => matchesQuery(e, query));
 
   const byDay = (day: string) => visible.filter((e) => e.date === day);
 
@@ -133,23 +124,28 @@ export default function WeekView({
                   style={{ top: (h - START_HOUR) * ROW_H, height: ROW_H }}
                 />
               ))}
-              {byDay(d)
-                .filter((e) => e.startTime)
-                .map((ev) => {
-                  const top = ((toMinutes(ev.startTime!) - START_HOUR * 60) / 60) * ROW_H;
-                  const dur = ev.endTime
-                    ? Math.max(30, toMinutes(ev.endTime) - toMinutes(ev.startTime!))
-                    : 60;
-                  const height = (dur / 60) * ROW_H;
+              {layoutOverlappingEvents(byDay(d).filter((e) => e.startTime)).map(
+                ({ event: ev, startMinutes, endMinutes, column, columnCount }) => {
+                  const top = ((startMinutes - START_HOUR * 60) / 60) * ROW_H;
+                  const height = ((endMinutes - startMinutes) / 60) * ROW_H;
                   const cls =
                     BLOCK_COLORS[ev.color ?? ""] ?? "bg-zinc-200 border-zinc-300 text-zinc-800";
+                  const width = 100 / columnCount;
                   return (
                     <button
                       key={`${ev.id}-${d}`}
-                      className={`absolute left-0.5 right-0.5 overflow-hidden rounded border px-0.5 text-left ${cls} ${
+                      onClick={() => onSelectDay(d)}
+                      data-timeline-column={column}
+                      data-timeline-columns={columnCount}
+                      className={`absolute overflow-hidden rounded border px-0.5 text-left ${cls} ${
                         ev.done ? "opacity-40" : ""
                       }`}
-                      style={{ top, height }}
+                      style={{
+                        top,
+                        height,
+                        left: `calc(${column * width}% + 2px)`,
+                        width: `calc(${width}% - 4px)`,
+                      }}
                       title={`${ev.startTime} ${ev.title}`}
                     >
                       <span className="block truncate text-[10px] font-medium leading-tight">
@@ -157,7 +153,8 @@ export default function WeekView({
                       </span>
                     </button>
                   );
-                })}
+                }
+              )}
             </div>
           ))}
         </div>

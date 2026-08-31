@@ -5,7 +5,7 @@ import type { CalendarEvent } from "@/lib/events";
 import AuthCard from "@/components/AuthCard";
 import ScheduleArea from "@/components/ScheduleArea";
 import AiInput from "@/components/AiInput";
-import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
+import { currentTimeStr, isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 
 type View = "day" | "week" | "month";
 
@@ -39,6 +39,7 @@ export default async function Home({
   const selected = typeof params.date === "string" && isValidDateStr(params.date) ? params.date : today;
   const view: View = params.view === "week" ? "week" : params.view === "month" ? "month" : "day";
   const query = typeof params.q === "string" ? params.q.trim() : "";
+  const currentTime = currentTimeStr();
 
   let events: CalendarEvent[];
   if (view === "week") {
@@ -52,7 +53,13 @@ export default async function Home({
   return (
     <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:max-w-5xl md:px-8 md:pt-[calc(env(safe-area-inset-top)+1.5rem)]">
 
-      <ScheduleArea initialDate={selected} initialView={view} initialQuery={query} initialEvents={events} />
+      <ScheduleArea
+        initialDate={selected}
+        initialView={view}
+        initialQuery={query}
+        initialEvents={events}
+        initialCurrentTime={currentTime}
+      />
 
       <AiInput />
     </main>

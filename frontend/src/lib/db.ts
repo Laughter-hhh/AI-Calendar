@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS events (
   color       TEXT,
   done        INTEGER NOT NULL DEFAULT 0,
   source_text TEXT,
+  external_uid TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, event_date);
@@ -80,6 +81,9 @@ function ensureEventsColumns(db: DatabaseSync): void {
   if (!cols.some((c) => c.name === "done")) {
     db.exec("ALTER TABLE events ADD COLUMN done INTEGER NOT NULL DEFAULT 0");
   }
+  if (!cols.some((c) => c.name === "external_uid")) {
+    db.exec("ALTER TABLE events ADD COLUMN external_uid TEXT");
+  }
 }
 
 export function getDb(): DatabaseSync {
@@ -100,6 +104,7 @@ export function getDb(): DatabaseSync {
   }
   db.exec(schema);
   ensureEventsColumns(db);
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_user_external_uid ON events(user_id, external_uid)");
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
   return db;

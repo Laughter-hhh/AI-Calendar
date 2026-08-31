@@ -29,11 +29,43 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        working-directory: frontend
+        run: pnpm lint
+
       - name: Build
         working-directory: frontend
         env:
           NEXT_TELEMETRY_DISABLED: "1"
         run: pnpm build
+
+      - name: Release regression tests
+        env:
+          BASE_URL: http://127.0.0.1:3100
+          DATABASE_PATH: ${{ runner.temp }}/ai-calendar-release.db
+        run: |
+          set -e
+          cd frontend
+          PORT=3100 pnpm start > "$RUNNER_TEMP/ai-calendar-test.log" 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for attempt in {1..30}; do
+            if curl -fsS "$BASE_URL/api/health" >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              cat "$RUNNER_TEMP/ai-calendar-test.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          cd ..
+          node scripts/parser-cases.mjs
+          node scripts/timeline-layout-test.mjs
+          node scripts/smoke-test.mjs
+          node scripts/ui-render-check.mjs
+          node scripts/calendar-feature-test.mjs
 
       - name: Prepare deploy bundle
         run: |
@@ -66,14 +98,40 @@ jobs:
           script: |
             set -e
             export PATH="/usr/local/bin:$PATH"
+            CURRENT="/opt/ai-calendar/app"
+            PREVIOUS="/opt/ai-calendar/app.previous"
+            rollback() {
+              rm -rf "$CURRENT"
+              if [ -d "$PREVIOUS" ]; then
+                mv "$PREVIOUS" "$CURRENT"
+                cd "$CURRENT"
+                pm2 startOrReload ecosystem.config.cjs || true
+              fi
+            }
+            trap rollback ERR
             mkdir -p /opt/ai-calendar/database/data
-            rm -rf /opt/ai-calendar/app
-            mkdir -p /opt/ai-calendar/app
-            tar -xzf /opt/ai-calendar/bundle.tar.gz -C /opt/ai-calendar/app
+            rm -rf "$PREVIOUS"
+            if [ -d "$CURRENT" ]; then
+              mv "$CURRENT" "$PREVIOUS"
+            fi
+            mkdir -p "$CURRENT"
+            tar -xzf /opt/ai-calendar/bundle.tar.gz -C "$CURRENT"
             rm -f /opt/ai-calendar/bundle.tar.gz
-            cd /opt/ai-calendar/app
+            cd "$CURRENT"
             pm2 startOrReload ecosystem.config.cjs
             pm2 save
             pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
-            sleep 3
-            curl -fsS http://localhost:3000/api/health || true
+            HEALTHY=0
+            for attempt in {1..10}; do
+              if curl -fsS http://localhost:3000/api/health; then
+                HEALTHY=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$HEALTHY" -ne 1 ]; then
+              pm2 logs --nostream --lines 50 || true
+              false
+            fi
+            trap - ERR
+            rm -rf "$PREVIOUS"

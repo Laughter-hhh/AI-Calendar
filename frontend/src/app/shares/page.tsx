@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { listShares } from "@/lib/shares";
 import ShareManager from "@/components/ShareManager";
@@ -11,7 +12,7 @@ export default async function SharesPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
         <p className="text-sm text-zinc-500">
-          请先 <a href="/" className="text-zinc-900 underline">登录</a>
+          请先 <Link href="/" className="text-zinc-900 underline">登录</Link>
         </p>
       </main>
     );
@@ -27,7 +28,7 @@ export default async function SharesPage() {
       </p>
       <ShareManager initial={shares} myEmail={user.email} />
       <p className="mt-8 text-center text-xs text-zinc-400">
-        <a href="/" className="hover:text-zinc-600">← 返回 AI Calendar</a>
+        <Link href="/" className="hover:text-zinc-600">← 返回 AI Calendar</Link>
       </p>
     </main>
   );

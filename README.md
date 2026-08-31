@@ -85,6 +85,8 @@ pnpm start
 
 如果服务器配置较低、不想在服务器上构建，可使用 **GitHub Actions 云端构建 + 自动部署**（零成本，`git push` 即自动更新），见 [CI 部署指南](deploy/CI-DEPLOYMENT.md)。
 
+每次发布会先在云端完成 Lint、生产构建和五套隔离回归测试，再上传服务器；部署失败会自动恢复上一版本。完整门禁见 [发布测试流](docs/RELEASE_TEST_PLAN.md)。
+
 ## 📱 手机 App
 
 已提供基于 Expo 的手机端 App（WebView 壳，先快速上线）：见 [mobile/README.md](mobile/README.md)。用 Expo Go 扫码即可在手机上预览，也可打包成安卓 APK 安装。

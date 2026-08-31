@@ -34,12 +34,40 @@ function check(name, condition, detail = "") {
 
 async function main() {
   console.log(`日历增强测试：${BASE_URL}`);
+  const unauthenticatedImport = await api("/api/events/import", {
+    method: "POST",
+    body: {
+      fileName: "unauthenticated.ics",
+      mode: "preview",
+      content: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR",
+    },
+  });
+  check("未登录不能导入", unauthenticatedImport.status === 401);
+
   const email = `calendar-features-${Date.now()}@test.local`;
   const register = await api("/api/auth/register", {
     method: "POST",
     body: { email, password: "123456" },
   });
   check("注册隔离测试账号", register.status === 200);
+  const unsupportedFile = await api("/api/events/import", {
+    method: "POST",
+    body: { fileName: "calendar.csv", mode: "preview", content: "title,date\n测试,2026-09-01" },
+  });
+  check(
+    "明确拒绝 CSV 等非 ICS 文件",
+    unsupportedFile.status === 415 && String(unsupportedFile.data?.error).includes(".ics"),
+    JSON.stringify(unsupportedFile.data)
+  );
+  const invalidContainer = await api("/api/events/import", {
+    method: "POST",
+    body: {
+      fileName: "broken.ics",
+      mode: "preview",
+      content: "BEGIN:VEVENT\r\nSUMMARY:缺少日历容器\r\nEND:VEVENT",
+    },
+  });
+  check("拒绝缺少 VCALENDAR 容器的伪 ICS", invalidContainer.status === 400);
 
   const original = await api("/api/events", {
     method: "POST",
@@ -165,6 +193,75 @@ async function main() {
   });
   check("拒绝非法时间格式", invalidFormat.status === 400, JSON.stringify(invalidFormat.data));
 
+  const compatibilityIcs = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    "UID:all-day@example.test",
+    "SUMMARY:外部全天待办",
+    "DTSTART;VALUE=DATE:20260902",
+    "DESCRIPTION:支持折行且不覆盖原有",
+    " 内容",
+    "END:VEVENT",
+    "BEGIN:VEVENT",
+    "UID:complex-repeat@example.test",
+    "SUMMARY:复杂重复课程",
+    "DTSTART;TZID=Asia/Shanghai:20260901T160000",
+    "DTEND;TZID=Asia/Shanghai:20260901T170000",
+    "RRULE:FREQ=WEEKLY;BYDAY=TU,TH",
+    "EXDATE;TZID=Asia/Shanghai:20260908T160000",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const compatibilityPreview = await api("/api/events/import", {
+    method: "POST",
+    body: { content: compatibilityIcs, fileName: "compatibility.ics", mode: "preview" },
+  });
+  check(
+    "预览全天事项、折行文本与复杂重复规则",
+    compatibilityPreview.status === 200 &&
+      compatibilityPreview.data?.ready === 2 &&
+      compatibilityPreview.data?.warnings?.some((warning) => warning.includes("复杂重复规则")) &&
+      compatibilityPreview.data?.warnings?.some((warning) => warning.includes("例外日期")),
+    JSON.stringify(compatibilityPreview.data)
+  );
+  const compatibilityImport = await api("/api/events/import", {
+    method: "POST",
+    body: { content: compatibilityIcs, fileName: "compatibility.ics", mode: "import" },
+  });
+  check("兼容事件确认后可安全导入", compatibilityImport.status === 200 && compatibilityImport.data?.imported === 2);
+  const allDayList = await api("/api/events?date=2026-09-02");
+  const importedAllDay = allDayList.data?.events?.find((event) => event.title === "外部全天待办");
+  check(
+    "全天事件与折行描述正确保存",
+    importedAllDay?.startTime === null && importedAllDay?.note === "支持折行且不覆盖原有内容",
+    JSON.stringify(importedAllDay)
+  );
+  const complexList = await api("/api/events?date=2026-09-01");
+  const importedComplex = complexList.data?.events?.find((event) => event.title === "复杂重复课程");
+  check("复杂重复规则降级为首日且给过预警", importedComplex?.repeat === null, JSON.stringify(importedComplex));
+
+  const thirdOverlap = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "第三个重叠任务",
+      date: "2026-09-01",
+      time: "13:30",
+      endTime: "15:00",
+    },
+  });
+  check("建立三重重叠布局样本", thirdOverlap.status === 201);
+  const earlyEvent = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "凌晨任务",
+      date: "2026-09-01",
+      time: "01:00",
+      endTime: "02:00",
+    },
+  });
+  check("建立凌晨布局样本", earlyEvent.status === 201);
+
   const dayPage = await api("/?date=2026-09-01");
   check(
     "日视图提供事项/时间线直接切换",
@@ -172,9 +269,14 @@ async function main() {
   );
   const weekPage = await api("/?date=2026-09-01&view=week");
   check(
-    "重叠任务被分配为两列",
-    weekPage.status === 200 && weekPage.text.includes('data-timeline-columns="2"'),
+    "三重重叠任务被分配为三列",
+    weekPage.status === 200 && weekPage.text.includes('data-timeline-columns="3"'),
     `status=${weekPage.status}`
+  );
+  check(
+    "周时间线自动向前扩展以显示凌晨任务",
+    weekPage.text.includes('data-timeline-start-hour="1"') && !weekPage.text.includes("top:-"),
+    "凌晨任务可能仍在可视区域外"
   );
 
   if (failures.length === 0) console.log("\n🎉 日历增强测试全部通过");

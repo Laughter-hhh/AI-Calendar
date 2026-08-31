@@ -13,12 +13,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   }
 
   const dir = process.env.DOWNLOADS_DIR ?? "/opt/ai-calendar/downloads";
-  const filePath = path.join(dir, name);
-  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+  const filePath = path.join(/* turbopackIgnore: true */ dir, name);
+  if (
+    !fs.existsSync(/* turbopackIgnore: true */ filePath) ||
+    !fs.statSync(/* turbopackIgnore: true */ filePath).isFile()
+  ) {
     return new NextResponse("Not Found", { status: 404 });
   }
 
-  const body = Readable.toWeb(fs.createReadStream(filePath)) as ReadableStream;
+  const body = Readable.toWeb(
+    fs.createReadStream(/* turbopackIgnore: true */ filePath)
+  ) as ReadableStream;
   return new NextResponse(body, {
     headers: {
       "Content-Type": "application/vnd.android.package-archive",

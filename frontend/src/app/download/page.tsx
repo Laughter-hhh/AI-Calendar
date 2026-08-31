@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "下载安卓 App - AI Calendar",
@@ -51,14 +52,14 @@ export default function DownloadPage() {
       <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
         <h2 className="text-base font-semibold text-zinc-800">说明</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5">
-          <li>当前为安卓版（Android 7.0+）。iOS 用户可用上方"添加到主屏幕"方式使用。</li>
+          <li>当前为安卓版（Android 7.0+）。iOS 用户可用上方「添加到主屏幕」方式使用。</li>
           <li>App 是网页版的容器，功能更新无需重新安装（刷新即得最新功能）。</li>
           <li>请在浏览器直接下载本 APK；不要从不明网站下载安装包。</li>
         </ul>
       </section>
 
       <p className="mt-8 text-center text-xs text-zinc-400">
-        <a href="/" className="hover:text-zinc-600">← 返回 AI Calendar</a>
+        <Link href="/" className="hover:text-zinc-600">← 返回 AI Calendar</Link>
       </p>
     </main>
   );

@@ -11,7 +11,7 @@ const CONFIG_PATH = process.env.AI_CONFIG_PATH ?? "/opt/ai-calendar/config.env";
 function loadFileConfig(): Record<string, string> {
   const result: Record<string, string> = {};
   try {
-    const text = fs.readFileSync(CONFIG_PATH, "utf8");
+    const text = fs.readFileSync(/* turbopackIgnore: true */ CONFIG_PATH, "utf8");
     for (const line of text.split(/\r?\n/)) {
       const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
       if (m && !m[1].startsWith("#")) result[m[1]] = m[2];

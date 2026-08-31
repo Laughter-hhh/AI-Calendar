@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import AuthBar from "@/components/AuthBar";
 import { APP_VERSION } from "@/lib/version";
@@ -11,7 +12,7 @@ export default async function SettingsPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 pt-[env(safe-area-inset-top)]">
         <p className="text-sm text-zinc-500">
-          请先 <a href="/" className="text-zinc-900 underline">登录</a>
+          请先 <Link href="/" className="text-zinc-900 underline">登录</Link>
         </p>
       </main>
     );
@@ -32,18 +33,18 @@ export default async function SettingsPage() {
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-zinc-800">功能</h2>
         <div className="mt-2 flex flex-col gap-2 text-sm">
-          <a href="/notes" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
+          <Link href="/notes" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
             📒 笔记本（记录不确定时间要做的待办）
-          </a>
-          <a href="/settings/help" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
+          </Link>
+          <Link href="/settings/help" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
             ❓ 帮助与使用说明
-          </a>
-          <a href="/shares" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
+          </Link>
+          <Link href="/shares" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
             🔗 共享日历（把日程分享给同伴）
-          </a>
-          <a href="/download" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
+          </Link>
+          <Link href="/download" className="rounded-lg bg-zinc-50 px-3 py-2 text-zinc-700 hover:bg-zinc-100">
             📱 下载安卓 App / iPhone 使用说明
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -62,7 +63,7 @@ export default async function SettingsPage() {
       </section>
 
       <p className="mt-8 text-center text-xs text-zinc-400">
-        <a href="/" className="hover:text-zinc-600">← 返回 AI Calendar</a>
+        <Link href="/" className="hover:text-zinc-600">← 返回 AI Calendar</Link>
       </p>
     </main>
   );

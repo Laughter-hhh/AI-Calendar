@@ -197,7 +197,12 @@ export default function ScheduleArea({
         ) : view === "week" ? (
           <WeekView initialEvents={events} startDate={date} query={query} onSelectDay={(d) => navigate(d, "day")} />
         ) : dayMode === "timeline" ? (
-          <DayTimelineView events={events} query={query} />
+          <DayTimelineView
+            events={events}
+            query={query}
+            date={date}
+            currentTime={initialCurrentTime}
+          />
         ) : (
           <EventList
             events={events}

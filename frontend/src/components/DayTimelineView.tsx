@@ -1,7 +1,8 @@
 "use client";
 
 import type { CalendarEvent } from "@/lib/events";
-import { layoutOverlappingEvents } from "@/lib/timeline";
+import { todayStr } from "@/lib/date";
+import { layoutOverlappingEvents, timeToMinutes } from "@/lib/timeline";
 
 const ROW_HEIGHT = 52;
 const BLOCK_COLORS: Record<string, string> = {
@@ -17,9 +18,13 @@ const BLOCK_COLORS: Record<string, string> = {
 export default function DayTimelineView({
   events,
   query,
+  date,
+  currentTime,
 }: {
   events: CalendarEvent[];
   query: string;
+  date: string;
+  currentTime: string;
 }) {
   const visible = events.filter(
     (event) => !query || event.title.toLowerCase().includes(query.toLowerCase())
@@ -30,9 +35,12 @@ export default function DayTimelineView({
   const earliest = layouts.length > 0 ? Math.min(...layouts.map((item) => item.startMinutes)) : 6 * 60;
   const latest = layouts.length > 0 ? Math.max(...layouts.map((item) => item.endMinutes)) : 23 * 60;
   const startHour = Math.max(0, Math.min(6, Math.floor(earliest / 60)));
-  const endHour = Math.min(24, Math.max(23, Math.ceil(latest / 60)));
+  const endHour = Math.min(24, Math.max(24, Math.ceil(latest / 60)));
   const hours = Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index);
   const height = (endHour - startHour) * ROW_HEIGHT;
+  const currentMinutes = timeToMinutes(currentTime);
+  const showCurrentTime =
+    date === todayStr() && currentMinutes >= startHour * 60 && currentMinutes <= endHour * 60;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -74,6 +82,20 @@ export default function DayTimelineView({
               style={{ top: (hour - startHour) * ROW_HEIGHT }}
             />
           ))}
+          {showCurrentTime && (
+            <div
+              className="pointer-events-none absolute inset-x-0 z-20 flex items-center"
+              style={{ top: ((currentMinutes - startHour * 60) / 60) * ROW_HEIGHT }}
+              aria-label={`当前时间 ${currentTime}`}
+              data-current-time={currentTime}
+            >
+              <span className="-ml-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+              <span className="h-px flex-1 bg-red-400" />
+              <span className="mr-1 rounded bg-white/90 px-1 text-[9px] font-medium text-red-500">
+                {currentTime}
+              </span>
+            </div>
+          )}
           {layouts.map(({ event, startMinutes, endMinutes, column, columnCount }) => {
             const top = ((startMinutes - startHour * 60) / 60) * ROW_HEIGHT;
             const blockHeight = Math.max(26, ((endMinutes - startMinutes) / 60) * ROW_HEIGHT - 2);

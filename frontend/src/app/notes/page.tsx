@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { listNotes } from "@/lib/notes";
 import NotesPanel from "@/components/NotesPanel";
@@ -11,7 +12,7 @@ export default async function NotesPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 pt-[env(safe-area-inset-top)]">
         <p className="text-sm text-zinc-500">
-          请先 <a href="/" className="text-zinc-900 underline">登录</a>
+          请先 <Link href="/" className="text-zinc-900 underline">登录</Link>
         </p>
       </main>
     );

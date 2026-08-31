@@ -23,7 +23,7 @@ function intervalOf<T extends TimelineEventLike>(event: T) {
   return {
     event,
     startMinutes,
-    endMinutes: Math.max(startMinutes + 30, explicitEnd),
+    endMinutes: Math.min(24 * 60, Math.max(startMinutes + 30, explicitEnd)),
     column: 0,
   };
 }

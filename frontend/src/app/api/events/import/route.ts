@@ -14,10 +14,17 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const content = typeof body.content === "string" ? body.content : "";
+  const fileName = typeof body.fileName === "string" ? body.fileName.trim() : "";
   const mode = body.mode === "preview" ? "preview" : "import";
+  if (fileName && !fileName.toLowerCase().endsWith(".ics")) {
+    return NextResponse.json({ error: "仅支持 .ics 日历文件" }, { status: 415 });
+  }
   if (!content.trim()) return NextResponse.json({ error: "文件内容为空" }, { status: 400 });
   if (Buffer.byteLength(content, "utf8") > MAX_CONTENT_BYTES) {
     return NextResponse.json({ error: "文件过大，请选择 5MB 以内的 .ics 文件" }, { status: 413 });
+  }
+  if (!/BEGIN:VCALENDAR/i.test(content) || !/END:VCALENDAR/i.test(content)) {
+    return NextResponse.json({ error: "不是有效的 .ics 日历文件" }, { status: 400 });
   }
 
   const parsed = parseIcs(content, MAX_EVENTS);

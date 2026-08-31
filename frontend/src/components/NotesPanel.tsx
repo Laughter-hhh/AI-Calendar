@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ParseResult } from "../../../backend/ai/types";
 
@@ -38,7 +39,6 @@ function repeatLabel(r?: string | null): string {
 export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
   const router = useRouter();
   const [notes, setNotes] = useState<Note[]>(initialNotes);
-  const [loaded, setLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -55,8 +55,8 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
           const data = await res.json();
           setNotes(Array.isArray(data.notes) ? data.notes : []);
         }
-      } finally {
-        if (!cancelled) setLoaded(true);
+      } catch {
+        // 保留服务端传入的初始列表，网络恢复后用户仍可手动操作。
       }
     })();
     return () => {
@@ -274,9 +274,9 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">📒 笔记本</h1>
-        <a href="/" className="text-sm text-zinc-500 hover:text-zinc-700">
+        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700">
           ← 返回日历
-        </a>
+        </Link>
       </div>
       <p className="mt-1.5 text-sm text-zinc-500">
         记录不确定什么时候做、但需要做的事；定好时间后可以一键转为日程。
@@ -307,7 +307,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
       <div className="mt-4 flex flex-col gap-2">
         {notes.length === 0 && (
           <p className="rounded-xl border border-dashed border-zinc-300 bg-white/60 px-4 py-8 text-center text-sm text-zinc-400">
-            还没有内容，把"不确定什么时候做"的事先记在这里
+            还没有内容，把「不确定什么时候做」的事先记在这里
           </p>
         )}
         {notes.map((note) => (

@@ -5,9 +5,9 @@ import type { CalendarEvent } from "@/lib/events";
 import { dateLabel, shiftDate, todayStr } from "@/lib/date";
 import { layoutOverlappingEvents } from "@/lib/timeline";
 
-// 时间安排视图：连续 7 天 × 时间块（6:00 - 23:00）
-const START_HOUR = 6;
-const HOURS = Array.from({ length: 18 }, (_, i) => i + START_HOUR);
+// 时间安排视图：默认显示 06:00 - 24:00；存在凌晨日程时自动向前扩展。
+const DEFAULT_START_HOUR = 6;
+const END_HOUR = 24;
 const ROW_H = 44;
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -49,10 +49,21 @@ export default function WeekView({
   const visible = initialEvents.filter((e) => matchesQuery(e, query));
 
   const byDay = (day: string) => visible.filter((e) => e.date === day);
+  const layoutsByDay = new Map(
+    days.map((day) => [day, layoutOverlappingEvents(byDay(day).filter((event) => event.startTime))])
+  );
+  const allLayouts = [...layoutsByDay.values()].flat();
+  const earliestMinutes =
+    allLayouts.length > 0
+      ? Math.min(...allLayouts.map((item) => item.startMinutes))
+      : DEFAULT_START_HOUR * 60;
+  const startHour = Math.max(0, Math.min(DEFAULT_START_HOUR, Math.floor(earliestMinutes / 60)));
+  const hourLines = Array.from({ length: END_HOUR - startHour + 1 }, (_, index) => startHour + index);
+  const timelineHeight = (END_HOUR - startHour) * ROW_H;
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-      <div className="min-w-[660px]">
+      <div className="min-w-[660px]" data-timeline-start-hour={startHour}>
         {/* 日期头 */}
         <div className="flex border-b border-zinc-200">
           <div className="w-12 shrink-0" />
@@ -101,7 +112,7 @@ export default function WeekView({
         {/* 时间网格 */}
         <div className="flex">
           <div className="w-12 shrink-0">
-            {HOURS.map((h) => (
+            {hourLines.slice(0, -1).map((h) => (
               <div
                 key={h}
                 style={{ height: ROW_H }}
@@ -115,19 +126,19 @@ export default function WeekView({
             <div
               key={d}
               className="relative flex-1 border-l border-zinc-100"
-              style={{ height: HOURS.length * ROW_H }}
+              style={{ height: timelineHeight }}
             >
-              {HOURS.map((h) => (
+              {hourLines.map((h) => (
                 <div
                   key={h}
                   className="absolute left-0 right-0 border-t border-zinc-50"
-                  style={{ top: (h - START_HOUR) * ROW_H, height: ROW_H }}
+                  style={{ top: (h - startHour) * ROW_H }}
                 />
               ))}
-              {layoutOverlappingEvents(byDay(d).filter((e) => e.startTime)).map(
+              {(layoutsByDay.get(d) ?? []).map(
                 ({ event: ev, startMinutes, endMinutes, column, columnCount }) => {
-                  const top = ((startMinutes - START_HOUR * 60) / 60) * ROW_H;
-                  const height = ((endMinutes - startMinutes) / 60) * ROW_H;
+                  const top = ((startMinutes - startHour * 60) / 60) * ROW_H;
+                  const height = Math.max(16, ((endMinutes - startMinutes) / 60) * ROW_H);
                   const cls =
                     BLOCK_COLORS[ev.color ?? ""] ?? "bg-zinc-200 border-zinc-300 text-zinc-800";
                   const width = 100 / columnCount;

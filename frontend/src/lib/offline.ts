@@ -1,5 +1,5 @@
-// 简易离线缓存：把日程数据存到本地（localStorage），断网时读取缓存
-// 说明：页面首次加载后断网可用；冷启动完全断网需要 HTTPS + Service Worker（待办项）
+// 离线缓存：按账号把日程数据存到本地（localStorage），断网时读取缓存。
+// Service Worker 负责静态应用壳和离线回退页；用户专属 API 不进入共享 Cache Storage。
 const PREFIX = "aical:cache:";
 
 let cachedUserId: number | null = null;

@@ -63,6 +63,7 @@ jobs:
           cd ..
           node scripts/parser-cases.mjs
           node scripts/timeline-layout-test.mjs
+          node scripts/offline-test.mjs
           node scripts/smoke-test.mjs
           node scripts/ui-render-check.mjs
           node scripts/calendar-feature-test.mjs

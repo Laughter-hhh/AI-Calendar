@@ -62,7 +62,8 @@ export default function DayTimelineView({
         </div>
       )}
 
-      <div className="flex">
+      {/* 给 06:00 首条网格线留出顶部呼吸空间，避免贴住卡片外框。 */}
+      <div className="flex pt-3" data-timeline-top-gap="12">
         <div className="w-12 shrink-0 bg-zinc-50/50">
           {hours.slice(0, -1).map((hour) => (
             <div

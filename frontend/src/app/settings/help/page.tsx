@@ -56,7 +56,7 @@ export default function HelpPage() {
       <section className={`${section} mt-3`}>
         <h2 className={h}>离线使用</h2>
         <p className="mt-2 text-sm text-zinc-600">
-          打开过的日程会缓存到本地，断网时显示“离线模式”可继续查看；联网后自动更新。
+          打开过的日程会按账号缓存到本地，断网时显示“离线模式”可继续切换查看；联网后自动更新。HTTPS 或 localhost 下还会启用离线应用壳，冷启动无网时显示回退页。
         </p>
       </section>
 

@@ -1,4 +1,5 @@
 import { layoutOverlappingEvents } from "../frontend/src/lib/timeline.ts";
+import { readFile } from "node:fs/promises";
 
 const failures = [];
 
@@ -66,6 +67,12 @@ check(
   "无结束时间的深夜任务不越过次日边界",
   late[0]?.startMinutes === 23 * 60 + 50 && late[0]?.endMinutes === 24 * 60,
   JSON.stringify(late)
+);
+
+const dayTimelineSource = await readFile(new URL("../frontend/src/components/DayTimelineView.tsx", import.meta.url), "utf8");
+check(
+  "单日时间线 06:00 顶部保留 12px 留白",
+  dayTimelineSource.includes('className="flex pt-3"') && dayTimelineSource.includes('data-timeline-top-gap="12"')
 );
 
 process.exit(failures.length === 0 ? 0 : 1);

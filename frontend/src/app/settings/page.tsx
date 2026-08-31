@@ -51,7 +51,7 @@ export default async function SettingsPage() {
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
         <h2 className="text-sm font-semibold text-zinc-800">数据与离线</h2>
         <p className="mt-2 text-xs leading-5 text-zinc-500">
-          日程保存在服务器数据库；打开过的日程会缓存到手机本地，断网时可继续查看（离线模式）。
+          日程保存在服务器数据库；打开过的日程会按账号缓存到手机本地，断网时可继续查看（离线模式），联网后自动刷新。
         </p>
       </section>
 

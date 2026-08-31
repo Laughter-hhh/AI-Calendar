@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
@@ -17,6 +17,23 @@ const WeekView = dynamic(() => import("./WeekView"), { ssr: true });
 const MonthView = dynamic(() => import("./MonthView"), { ssr: true });
 
 type View = "day" | "week" | "month";
+
+function subscribeToNetwork(onChange: () => void): () => void {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+function getNetworkOffline(): boolean {
+  return typeof navigator !== "undefined" && !navigator.onLine;
+}
+
+function getServerNetworkOffline(): boolean {
+  return false;
+}
 
 function buildUrl(date: string, view: View, query: string): string {
   const params = new URLSearchParams();
@@ -45,7 +62,9 @@ export default function ScheduleArea({
   const [query, setQuery] = useState(initialQuery);
   const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
-  const [offline, setOffline] = useState(false);
+  const [usingCachedData, setUsingCachedData] = useState(false);
+  const networkOffline = useSyncExternalStore(subscribeToNetwork, getNetworkOffline, getServerNetworkOffline);
+  const offline = networkOffline || usingCachedData;
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(initialQuery !== "");
   const [dayMode, setDayMode] = useState<"list" | "timeline">("list");
@@ -63,7 +82,7 @@ export default function ScheduleArea({
       }
       const res = await fetchCachedJson<{ events: CalendarEvent[] }>(url);
       if (res.data?.events) setEvents(res.data.events);
-      setOffline(res.fromCache && !isOnline());
+      setUsingCachedData(res.fromCache && !isOnline());
     } catch {
       // 网络异常保留旧数据
     } finally {
@@ -99,6 +118,13 @@ export default function ScheduleArea({
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [load]);
+
+  // 网络状态由 useSyncExternalStore 驱动；恢复联网后刷新当前视图。
+  useEffect(() => {
+    const onOnline = () => void load(date, view);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [date, load, view]);
 
   let exportFrom = date;
   let exportTo = date;

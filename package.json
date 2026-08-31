@@ -13,6 +13,7 @@
     "test:ui": "node scripts/ui-render-check.mjs",
     "test:calendar-features": "node scripts/calendar-feature-test.mjs",
     "test:timeline": "node scripts/timeline-layout-test.mjs",
+    "test:offline": "node scripts/offline-test.mjs",
     "test:parser": "node scripts/parser-cases.mjs"
   },
   "engines": {

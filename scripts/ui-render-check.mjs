@@ -2,6 +2,8 @@
 // 覆盖：注册 → 给"明天"创建日程 → ?date=明天 页面应显示该日程 → 今天页面不应显示
 // 使用：先启动服务，然后 BASE_URL=http://localhost:3000 node scripts/ui-render-check.mjs
 
+import { readFile } from "node:fs/promises";
+
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const failures = [];
 
@@ -38,6 +40,14 @@ function check(name, cond, detail = "") {
 
 async function main() {
   console.log(`页面渲染检查：${BASE_URL}`);
+
+  const notesSource = await readFile(new URL("../frontend/src/components/NotesPanel.tsx", import.meta.url), "utf8");
+  const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
+  check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
+  check(
+    "日历菜单使用客户端导航打开笔记本",
+    scheduleSource.includes('<Link') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')
+  );
 
   const email = `ui-${Date.now()}@test.local`;
   const reg = await api("/api/auth/register", { method: "POST", body: { email, password: "123456" } });

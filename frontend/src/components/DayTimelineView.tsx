@@ -127,7 +127,7 @@ export default function DayTimelineView({
             );
           })}
           {timed.length === 0 && (
-            <div className="absolute inset-x-4 top-10 rounded-xl border border-dashed border-zinc-200 p-5 text-center text-sm text-zinc-400">
+            <div className="absolute inset-x-4 top-10 z-10 rounded-xl border border-dashed border-zinc-200 bg-white px-4 py-5 text-center text-sm text-zinc-400">
               这一天没有定时日程
             </div>
           )}

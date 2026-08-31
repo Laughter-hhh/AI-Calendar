@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ParseResult } from "../../../backend/ai/types";
 
@@ -45,6 +44,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
   const [editText, setEditText] = useState("");
   const [error, setError] = useState("");
   const [convert, setConvert] = useState<ConvertState | null>(null);
+  const [returning, setReturning] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -270,13 +270,33 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
   const rowBtn = "rounded-lg px-2 py-1 text-xs hover:bg-zinc-100";
   const doneCount = notes.filter((n) => n.done).length;
 
+  function returnToCalendar() {
+    if (returning) return;
+    setReturning(true);
+    // 从日历进入笔记本时优先回退历史记录，避免重新请求首页和整页加载。
+    let cameFromCalendar = false;
+    try {
+      cameFromCalendar = Boolean(sessionStorage.getItem("aical:notes-return"));
+      sessionStorage.removeItem("aical:notes-return");
+    } catch {
+      // 存储不可用时走首页导航。
+    }
+    if (cameFromCalendar) router.back();
+    else router.push("/");
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">📒 笔记本</h1>
-        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700">
-          ← 返回日历
-        </Link>
+        <button
+          type="button"
+          onClick={returnToCalendar}
+          disabled={returning}
+          className="text-sm text-zinc-500 hover:text-zinc-700 disabled:opacity-50"
+        >
+          {returning ? "返回中…" : "← 返回日历"}
+        </button>
       </div>
       <p className="mt-1.5 text-sm text-zinc-500">
         记录不确定什么时候做、但需要做的事；定好时间后可以一键转为日程。

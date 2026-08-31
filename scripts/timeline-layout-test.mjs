@@ -74,5 +74,9 @@ check(
   "单日时间线 06:00 顶部保留 12px 留白",
   dayTimelineSource.includes('className="flex pt-3"') && dayTimelineSource.includes('data-timeline-top-gap="12"')
 );
+check(
+  "空时间线提示使用不透明层遮住网格线",
+  dayTimelineSource.includes("z-10 rounded-xl") && dayTimelineSource.includes("bg-white px-4 py-5")
+);
 
 process.exit(failures.length === 0 ? 0 : 1);

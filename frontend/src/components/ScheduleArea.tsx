@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import type { CalendarEvent } from "@/lib/events";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
@@ -254,9 +255,19 @@ export default function ScheduleArea({
             >
             🔍 搜索日程
             </button>
-            <a href="/notes" className={menuItem}>
+            <Link
+              href="/notes"
+              className={menuItem}
+              onClick={() => {
+                try {
+                  sessionStorage.setItem("aical:notes-return", window.location.href);
+                } catch {
+                  // 存储不可用时，笔记本页会回退到首页导航。
+                }
+              }}
+            >
               📒 笔记本（不确定时间的事）
-            </a>
+            </Link>
             <div className="flex items-center gap-2 px-3 py-1">
               <span className="flex-1" />
               <ExportButton from={exportFrom} to={exportTo} />

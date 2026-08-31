@@ -50,8 +50,11 @@ async function main() {
     scheduleSource.includes('<Link') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')
   );
   check(
-    "移动端右侧左滑返回上一级",
-    swipeSource.includes("touchstart") && swipeSource.includes("touchend") && swipeSource.includes("router.back()")
+    "移动端左滑返回上一级并避开横向控件",
+    swipeSource.includes("touchstart") &&
+      swipeSource.includes("touchend") &&
+      swipeSource.includes("isHorizontalScroller") &&
+      swipeSource.includes("router.back()")
   );
 
   const email = `ui-${Date.now()}@test.local`;

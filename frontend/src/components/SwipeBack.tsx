@@ -3,10 +3,24 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const EDGE_SIZE = 32;
 const SWIPE_DISTANCE = 72;
 
-/** 移动端从右侧边缘向左滑返回上一级；表单和横向控件不会触发。 */
+function isHorizontalScroller(target: HTMLElement | null): boolean {
+  let current = target;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    if (
+      (style.overflowX === "auto" || style.overflowX === "scroll") &&
+      current.scrollWidth > current.clientWidth + 1
+    ) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+/** 移动端向左滑返回上一级；表单和横向滚动控件不会触发。 */
 export default function SwipeBack() {
   const router = useRouter();
 
@@ -19,12 +33,15 @@ export default function SwipeBack() {
         return;
       }
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, button, [contenteditable=\"true\"], [data-swipe-back-ignore]")) {
+      if (
+        target?.closest("input, textarea, select, button, [contenteditable=\"true\"], [data-swipe-back-ignore]") ||
+        isHorizontalScroller(target)
+      ) {
         start = null;
         return;
       }
       const touch = event.touches[0];
-      start = touch.clientX >= window.innerWidth - EDGE_SIZE ? { x: touch.clientX, y: touch.clientY } : null;
+      start = { x: touch.clientX, y: touch.clientY };
     }
 
     function onTouchEnd(event: TouchEvent) {
@@ -36,7 +53,7 @@ export default function SwipeBack() {
       if (dx > -SWIPE_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.25) return;
 
       // 只响应 Next 已建立的应用内历史，避免首次打开应用时滑出到外部网站。
-      if (window.history.state?.__NA) router.back();
+      if (window.history.length > 1 && window.history.state?.__NA) router.back();
     }
 
     window.addEventListener("touchstart", onTouchStart, { passive: true });

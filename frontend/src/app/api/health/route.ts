@@ -14,5 +14,7 @@ export async function GET() {
     name: "ai-calendar",
     time: new Date().toISOString(),
     db,
+    storage: "sqlite",
+    sync: { metadata: true, cloud: false },
   });
 }

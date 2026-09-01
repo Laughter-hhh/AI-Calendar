@@ -42,9 +42,13 @@ async function main() {
   console.log(`页面渲染检查：${BASE_URL}`);
 
   const notesSource = await readFile(new URL("../frontend/src/components/NotesPanel.tsx", import.meta.url), "utf8");
+  const notesLoadingSource = await readFile(new URL("../frontend/src/app/notes/loading.tsx", import.meta.url), "utf8");
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
+  const eventListSource = await readFile(new URL("../frontend/src/components/EventList.tsx", import.meta.url), "utf8");
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
+  check("笔记本路由提供即时加载反馈", notesLoadingSource.includes("aria-busy") && notesLoadingSource.includes("animate-pulse"));
+  check("笔记本不在挂载时重复请求列表", !notesSource.includes('fetch("/api/notes");'));
   check(
     "日历菜单使用客户端导航打开笔记本",
     scheduleSource.includes('<Link') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')
@@ -86,6 +90,7 @@ async function main() {
   );
   check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
   check("日视图包含事项/时间线切换", datePage.text.includes(">事项<") && datePage.text.includes(">时间线<"));
+  check("重复日程编辑提供范围选择入口", eventListSource.includes("仅本次") && eventListSource.includes("整个系列"));
 
   const weekPage = await api(`/?date=${tomorrow}&view=week`);
   check("时间安排页返回 200 且含标题与时间刻度", weekPage.status === 200 && weekPage.text.includes("时间安排") && weekPage.text.includes("6:00"), `status=${weekPage.status}`);

@@ -51,7 +51,7 @@ export default async function Home({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:max-w-5xl md:px-8 md:pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+    <main className="mx-auto w-full max-w-6xl px-4 pb-48 pt-[calc(env(safe-area-inset-top)+1rem)] md:px-10 md:pt-[calc(env(safe-area-inset-top)+2rem)]">
 
       <ScheduleArea
         initialDate={selected}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createEvent, listEvents, listEventsRange } from "@/lib/events";
+import { createEvent, findEventConflicts, listEvents, listEventsRange } from "@/lib/events";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { isValidDateStr, todayStr } from "@/lib/date";
 import { EventValidationError } from "@/lib/event-validation";
@@ -55,7 +55,8 @@ export async function POST(request: Request) {
       done: body.done === true,
       sourceText: typeof body.sourceText === "string" && body.sourceText ? body.sourceText : null,
     });
-    return NextResponse.json({ event }, { status: 201 });
+    const conflicts = findEventConflicts(user.id, event.date, event.startTime, event.endTime, event.id);
+    return NextResponse.json({ event, conflicts }, { status: 201 });
   } catch (error) {
     if (error instanceof EventValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

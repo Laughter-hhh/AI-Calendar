@@ -43,15 +43,15 @@ export default function DayTimelineView({
     date === todayStr() && currentMinutes >= startHour * 60 && currentMinutes <= endHour * 60;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white/90 shadow-[0_12px_30px_rgba(30,64,175,0.08)]">
       {todos.length > 0 && (
-        <div className="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50/80 px-3 py-2">
-          <span className="shrink-0 text-[11px] font-medium text-zinc-400">全天</span>
+        <div className="flex items-center gap-2 border-b border-sky-100 bg-sky-50/70 px-4 py-2.5">
+          <span className="shrink-0 text-[11px] font-semibold text-sky-700/70">全天</span>
           <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
             {todos.map((event) => (
               <span
                 key={event.id}
-                className={`shrink-0 whitespace-nowrap rounded-md bg-white px-2 py-1 text-xs text-zinc-600 ring-1 ring-zinc-200 ${
+                className={`shrink-0 whitespace-nowrap rounded-lg bg-white px-2.5 py-1.5 text-xs text-sky-900/75 ring-1 ring-sky-100 ${
                   event.done ? "line-through opacity-50" : ""
                 }`}
               >
@@ -64,7 +64,7 @@ export default function DayTimelineView({
 
       {/* 给 06:00 首条网格线留出顶部呼吸空间，避免贴住卡片外框。 */}
       <div className="flex pt-3" data-timeline-top-gap="12">
-        <div className="w-12 shrink-0 bg-zinc-50/50">
+        <div className="w-12 shrink-0 bg-sky-50/45">
           {hours.slice(0, -1).map((hour) => (
             <div
               key={hour}
@@ -79,7 +79,7 @@ export default function DayTimelineView({
           {hours.map((hour) => (
             <div
               key={hour}
-              className="absolute left-0 right-0 border-t border-zinc-100"
+              className="absolute left-0 right-0 border-t border-sky-100"
               style={{ top: (hour - startHour) * ROW_HEIGHT }}
             />
           ))}
@@ -127,7 +127,7 @@ export default function DayTimelineView({
             );
           })}
           {timed.length === 0 && (
-            <div className="absolute inset-x-4 top-10 z-10 rounded-xl border border-dashed border-zinc-200 bg-white px-4 py-5 text-center text-sm text-zinc-400">
+            <div className="absolute inset-x-4 top-4 z-10 rounded-xl border border-dashed border-sky-200 bg-white px-4 py-5 text-center text-sm text-sky-700/60 shadow-sm ring-4 ring-white/80">
               这一天没有定时日程
             </div>
           )}

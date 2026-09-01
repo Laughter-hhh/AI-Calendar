@@ -103,7 +103,7 @@ export default function ImportButton() {
         <button
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          className="shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 md:px-3 md:py-2 md:text-sm"
+          className="ui-button-secondary h-10 shrink-0 px-3 text-sm"
           title="先预览再导入 .ics（Google Calendar / Apple 日历 / Outlook）"
         >
           {busy ? "读取中…" : "导入 .ics"}
@@ -134,7 +134,7 @@ export default function ImportButton() {
               setMsg("已取消，原有日程未改变");
             }}
           />
-          <section className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl md:rounded-2xl md:p-5">
+          <section className="ui-card relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl p-5 shadow-2xl md:rounded-3xl md:p-6">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 id="import-preview-title" className="text-base font-semibold text-zinc-900">
@@ -146,7 +146,7 @@ export default function ImportButton() {
               </div>
               <button
                 type="button"
-                className="rounded-lg px-2 py-1 text-zinc-400 hover:bg-zinc-100"
+                className="ui-button-ghost h-9 w-9 px-0"
                 aria-label="关闭"
                 onClick={() => setPending(null)}
               >
@@ -169,7 +169,7 @@ export default function ImportButton() {
               </div>
             </div>
 
-            <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-700">
+            <p className="mt-3 rounded-xl bg-sky-50 px-3 py-2.5 text-xs leading-5 text-sky-800">
               采用只追加策略：不会修改或删除任何原有日程；重复导入同一事件会自动跳过。
             </p>
 
@@ -186,7 +186,7 @@ export default function ImportButton() {
 
             <div className="mt-3">
               <p className="text-xs font-medium text-zinc-600">前 {pending.preview.preview.length} 条预览</p>
-              <ul className="mt-1.5 divide-y divide-zinc-100 rounded-lg border border-zinc-200 px-3">
+              <ul className="mt-2 divide-y divide-sky-100 rounded-xl border border-sky-100 px-3">
                 {pending.preview.preview.map((event, index) => (
                   <li key={`${event.date}-${event.startTime}-${event.title}-${index}`} className="py-2">
                     <div className="flex min-w-0 items-baseline gap-2">
@@ -221,7 +221,7 @@ export default function ImportButton() {
                 type="button"
                 onClick={() => void confirmImport()}
                 disabled={busy}
-                className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                className="ui-button-primary h-11 flex-1 px-4 text-sm"
               >
                 {busy ? "导入中…" : `确认新增 ${pending.preview.ready} 条`}
               </button>
@@ -232,7 +232,7 @@ export default function ImportButton() {
                   setMsg("已取消，原有日程未改变");
                 }}
                 disabled={busy}
-                className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
+                className="ui-button-secondary h-11 px-4 text-sm"
               >
                 取消
               </button>

@@ -28,7 +28,7 @@ export default function ExportButton({ from, to }: { from: string; to: string })
     <button
       onClick={download}
       disabled={busy}
-      className="shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 md:px-3 md:py-2 md:text-sm"
+      className="ui-button-secondary h-10 shrink-0 px-3 text-sm"
       title="导出为 .ics，可导入 Google Calendar / Apple 日历 / Outlook"
     >
       {busy ? "…" : "导出"}

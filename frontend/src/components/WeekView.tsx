@@ -62,21 +62,21 @@ export default function WeekView({
   const timelineHeight = (END_HOUR - startHour) * ROW_H;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-sky-100 bg-white/90 shadow-[0_12px_30px_rgba(30,64,175,0.08)]">
       <div className="min-w-[660px]" data-timeline-start-hour={startHour}>
         {/* 日期头 */}
-        <div className="flex border-b border-zinc-200">
+        <div className="flex border-b border-sky-100">
           <div className="w-12 shrink-0" />
           {days.map((d) => (
             <button
               key={d}
               onClick={() => onSelectDay(d)}
-              className={`flex-1 border-l border-zinc-100 py-1.5 text-center hover:bg-zinc-50 ${
-                d === today ? "bg-zinc-100" : ""
+              className={`flex-1 border-l border-sky-100 py-2.5 text-center hover:bg-sky-50 ${
+                d === today ? "bg-amber-50" : ""
               }`}
             >
-              <div className="text-[11px] text-zinc-400">{shortLabel(d)}</div>
-              <div className={`text-xs ${d === today ? "font-bold text-zinc-900" : "text-zinc-600"}`}>
+              <div className="text-[11px] text-sky-700/60">{shortLabel(d)}</div>
+              <div className={`text-xs ${d === today ? "font-bold text-amber-800" : "text-sky-900/70"}`}>
                 {`周${WEEKDAYS[new Date(`${d}T00:00:00Z`).getUTCDay()]}`}
               </div>
             </button>
@@ -84,12 +84,12 @@ export default function WeekView({
         </div>
 
         {/* 全天/待办 */}
-        <div className="flex border-b border-zinc-100 bg-zinc-50/60">
+        <div className="flex border-b border-sky-100 bg-sky-50/65">
           <div className="w-12 shrink-0" />
           {days.map((d) => {
             const todos = byDay(d).filter((e) => !e.startTime);
             return (
-              <div key={d} className="min-h-7 flex-1 border-l border-zinc-100 px-0.5 py-0.5">
+              <div key={d} className="min-h-9 flex-1 border-l border-sky-100 px-1 py-1">
                 {todos.slice(0, 3).map((ev) => (
                   <span
                     key={`${ev.id}-${d}`}
@@ -125,13 +125,13 @@ export default function WeekView({
           {days.map((d) => (
             <div
               key={d}
-              className="relative flex-1 border-l border-zinc-100"
+              className="relative flex-1 border-l border-sky-100"
               style={{ height: timelineHeight }}
             >
               {hourLines.map((h) => (
                 <div
                   key={h}
-                  className="absolute left-0 right-0 border-t border-zinc-50"
+                  className="absolute left-0 right-0 border-t border-sky-50"
                   style={{ top: (h - startHour) * ROW_H }}
                 />
               ))}

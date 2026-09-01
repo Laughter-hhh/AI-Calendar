@@ -7,6 +7,11 @@ import { OpenAICompatibleParser } from "./providers/openai";
 import type { ParseContext, ParseResult } from "./types";
 import { getConfig } from "./config";
 
+/** 本周是有限日期范围；即使模型改写成“每周”，也必须回到原句走确定性解析。 */
+function isFiniteCurrentWeekSentence(text: string): boolean {
+  return /(?:本|这)(?:周|星期|礼拜)/.test(text) && !/(?:每(?:周|星期|礼拜)|每天|每日|重复|持续)/.test(text);
+}
+
 export async function parseEvent(
   text: string,
   context?: ParseContext
@@ -31,7 +36,10 @@ export async function parseEvent(
               "$1"
             )
           : canonical;
-        const result = await localParser.parse(safeCanonical, context);
+        const result = await localParser.parse(
+          isFiniteCurrentWeekSentence(text) ? text : safeCanonical,
+          context
+        );
         // 只要标准化结果可用（有事件或需要追问），就使用它
         if (result.events.length > 0 || result.missing.length > 0) {
           return { result, provider: "openai" };

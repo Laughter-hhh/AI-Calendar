@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CalendarEvent } from "@/lib/events";
 import { EVENT_COLORS, colorDot, colorText } from "@/lib/colors";
 import { eventTimingError } from "@/lib/event-validation";
+import { enqueueMutation } from "@/lib/offline";
 
 function repeatLabel(repeat: string): string {
   if (repeat === "daily") return "每天";
@@ -33,10 +34,14 @@ export default function EventList({
   onRefresh: () => Promise<void>;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [scopePromptId, setScopePromptId] = useState<number | null>(null);
+  const [editScope, setEditScope] = useState<"single" | "series">("series");
+  const [editOccurrenceDate, setEditOccurrenceDate] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [actionId, setActionId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
+  const [conflictNotice, setConflictNotice] = useState("");
   const [draft, setDraft] = useState<Draft>({
     title: "",
     date: "",
@@ -74,8 +79,11 @@ export default function EventList({
     await onRefresh();
   }
 
-  function startEdit(event: CalendarEvent) {
+  function startEdit(event: CalendarEvent, scope: "single" | "series" = "series") {
     setEditingId(event.id);
+    setScopePromptId(null);
+    setEditScope(scope);
+    setEditOccurrenceDate(event.date);
     setDetailId(null);
     setActionId(null);
     setEditError("");
@@ -106,24 +114,43 @@ export default function EventList({
 
     setSaving(true);
     setEditError("");
+    const payload = {
+      title: draft.title.trim(),
+      date: draft.date,
+      time: draft.time || null,
+      endTime: draft.endTime || null,
+      note: draft.note.trim() || null,
+      color: draft.color || null,
+      mode: editScope,
+      occurrenceDate: editOccurrenceDate,
+    };
     try {
-      const response = await fetch(`/api/events/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: draft.title.trim(),
-          date: draft.date,
-          time: draft.time || null,
-          endTime: draft.endTime || null,
-          note: draft.note.trim() || null,
-          color: draft.color || null,
-        }),
-      });
+      let response: Response;
+      try {
+        response = await fetch(`/api/events/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        enqueueMutation({ url: `/api/events/${id}`, method: "PATCH", body: payload });
+        setEditingId(null);
+        setConflictNotice("当前离线：修改已暂存，联网后会自动同步。");
+        return;
+      }
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         setEditError(result.error ?? "保存失败，请重试");
         return;
       }
+      const conflictTitles = Array.isArray(result.conflicts)
+        ? result.conflicts.map((event: { title?: string }) => event.title).filter(Boolean)
+        : [];
+      setConflictNotice(
+        conflictTitles.length > 0
+          ? `已保存，但与以下日程时间重叠：${conflictTitles.join("、")}`
+          : ""
+      );
       setEditingId(null);
       await onRefresh();
     } finally {
@@ -131,15 +158,28 @@ export default function EventList({
     }
   }
 
+  function requestEdit(event: CalendarEvent) {
+    if (event.repeat) {
+      setScopePromptId(event.id);
+      setActionId(null);
+      setDetailId(null);
+      return;
+    }
+    startEdit(event);
+  }
+
   if (visible.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 p-8 text-center">
+      <div>
+        {conflictNotice && <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{conflictNotice}</p>}
+        <div className="ui-card border-dashed bg-white/75 p-10 text-center">
         <p className="text-sm text-zinc-500">
           {query ? "没有匹配的日程" : isToday ? "今天还没有日程" : "这一天还没有日程"}
         </p>
         <p className="mt-1 text-sm text-zinc-400">
           试试告诉 AI：&ldquo;明天下午三点开会&rdquo;
         </p>
+        </div>
       </div>
     );
   }
@@ -148,7 +188,7 @@ export default function EventList({
   const todos = visible.filter((event) => event.startTime === null);
 
   const renderItem = (event: CalendarEvent) => (
-    <li key={event.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm md:px-4 md:py-2.5">
+    <li key={event.id} className="ui-card px-4 py-3 transition-shadow hover:shadow-md md:px-5 md:py-4">
       {editingId === event.id ? (
         <div className="space-y-2.5">
           <label className="block">
@@ -156,7 +196,7 @@ export default function EventList({
             <input
               value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              className="ui-input w-full px-3 text-sm"
             />
           </label>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -166,7 +206,7 @@ export default function EventList({
                 type="date"
                 value={draft.date}
                 onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+                className="ui-input w-full px-3 text-sm"
               />
             </label>
             <label>
@@ -182,7 +222,7 @@ export default function EventList({
                     endTime: e.target.value ? draft.endTime : "",
                   })
                 }
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+                className="ui-input w-full px-3 text-sm"
               />
             </label>
             <label>
@@ -194,7 +234,7 @@ export default function EventList({
                 disabled={!draft.time}
                 min={draft.time || undefined}
                 onChange={(e) => setDraft({ ...draft, endTime: e.target.value })}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 disabled:bg-zinc-100 disabled:text-zinc-400"
+                className="ui-input w-full px-3 text-sm disabled:bg-slate-100 disabled:text-zinc-400"
               />
             </label>
           </div>
@@ -205,7 +245,7 @@ export default function EventList({
                 value={draft.note}
                 onChange={(e) => setDraft({ ...draft, note: e.target.value })}
                 placeholder="可选"
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+                className="ui-input w-full px-3 text-sm"
               />
             </label>
             <label>
@@ -213,7 +253,7 @@ export default function EventList({
               <select
                 value={draft.color}
                 onChange={(e) => setDraft({ ...draft, color: e.target.value })}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+                className="ui-input w-full px-3 text-sm"
               >
                 {EVENT_COLORS.map((color) => (
                   <option key={color.value} value={color.value}>
@@ -232,14 +272,14 @@ export default function EventList({
             <button
               onClick={() => saveEdit(event.id)}
               disabled={saving}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+              className="ui-button-primary h-10 px-4 text-sm"
             >
               {saving ? "保存中…" : "保存"}
             </button>
             <button
               onClick={() => setEditingId(null)}
               disabled={saving}
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100"
+              className="ui-button-secondary h-10 px-4 text-sm"
             >
               取消
             </button>
@@ -302,7 +342,7 @@ export default function EventList({
             {!event.ownerEmail && (
               <button
                 onClick={() => setActionId(actionId === event.id ? null : event.id)}
-                className="shrink-0 rounded-md px-2 py-1 text-base leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                className="ui-button-ghost h-9 w-9 shrink-0 px-0 text-base leading-none"
                 aria-label={`${event.title} 的操作`}
                 aria-expanded={actionId === event.id}
               >
@@ -313,25 +353,42 @@ export default function EventList({
 
           {event.note && <p className="mt-1 truncate pl-[7.75rem] text-xs text-zinc-400 sm:hidden">{event.note}</p>}
 
+          {scopePromptId === event.id && !event.ownerEmail && (
+            <div className="mt-3 rounded-xl border border-sky-100 bg-sky-50/75 p-3">
+              <p className="text-xs font-semibold text-sky-900/75">这是重复日程，要修改哪一部分？</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button onClick={() => startEdit(event, "single")} className="ui-button-secondary h-9 px-3 text-xs">
+                  仅本次
+                </button>
+                <button onClick={() => startEdit(event, "series")} className="ui-button-primary h-9 px-3 text-xs">
+                  整个系列
+                </button>
+                <button onClick={() => setScopePromptId(null)} className="ui-button-ghost h-9 px-3 text-xs">
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
           {actionId === event.id && !event.ownerEmail && (
-            <div className="mt-2 flex flex-wrap justify-end gap-1 border-t border-zinc-100 pt-2">
+            <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-sky-100 pt-3">
               <button
-                onClick={() => startEdit(event)}
-                className="whitespace-nowrap rounded-md bg-zinc-100 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-200"
+                onClick={() => requestEdit(event)}
+                className="ui-button-secondary h-9 px-3 text-xs"
               >
                 编辑
               </button>
               {event.repeat && (
                 <button
                   onClick={() => removeSingle(event)}
-                  className="whitespace-nowrap rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-500 hover:bg-red-100"
+                  className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100"
                 >
                   仅删此日
                 </button>
               )}
               <button
                 onClick={() => removeSeries(event)}
-                className="whitespace-nowrap rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-500 hover:bg-red-100"
+                className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100"
               >
                 {event.repeat ? "删除整个系列" : "删除"}
               </button>
@@ -339,7 +396,7 @@ export default function EventList({
           )}
 
           {detailId === event.id && (
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 rounded-xl bg-sky-50/75 px-3 py-2.5 text-xs text-sky-900/70">
               <span>状态：{event.done ? "已完成 ✅" : "未完成"}</span>
               <span>
                 日期：{event.date} {event.startTime ?? "全天"}
@@ -362,16 +419,17 @@ export default function EventList({
 
   return (
     <div className="flex flex-col gap-3">
+      {conflictNotice && <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{conflictNotice}</p>}
       {timed.length > 0 && (
         <section>
-          {todos.length > 0 && <h3 className="mb-1.5 text-xs font-semibold text-zinc-400">⏰ 定时日程</h3>}
-          <ul className="flex flex-col gap-1.5">{timed.map(renderItem)}</ul>
+          {todos.length > 0 && <h3 className="mb-2 text-xs font-semibold text-sky-700/70">⏰ 定时日程</h3>}
+          <ul className="flex flex-col gap-2">{timed.map(renderItem)}</ul>
         </section>
       )}
       {todos.length > 0 && (
         <section>
-          {timed.length > 0 && <h3 className="mb-1.5 text-xs font-semibold text-zinc-400">☑ 待办事项</h3>}
-          <ul className="flex flex-col gap-1.5">{todos.map(renderItem)}</ul>
+          {timed.length > 0 && <h3 className="mb-2 text-xs font-semibold text-sky-700/70">☑ 待办事项</h3>}
+          <ul className="flex flex-col gap-2">{todos.map(renderItem)}</ul>
         </section>
       )}
     </div>

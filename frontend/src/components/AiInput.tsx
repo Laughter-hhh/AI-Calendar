@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParseResult } from "../../../backend/ai/types";
 import type { ActionResult } from "../../../backend/ai/action";
+import { enqueueMutation } from "@/lib/offline";
 
 type Status = "idle" | "parsing" | "asking" | "preview" | "action";
 
@@ -108,16 +109,38 @@ export default function AiInput() {
   async function saveAll() {
     if (!result) return;
     setSaving(true);
+    const conflictTitles: string[] = [];
+    let queuedCount = 0;
     try {
       for (const ev of result.events) {
-        await fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...ev, sourceText: text }),
-        });
+        const payload = { ...ev, sourceText: text };
+        let response: Response;
+        try {
+          response = await fetch("/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } catch {
+          enqueueMutation({ url: "/api/events", method: "POST", body: payload });
+          queuedCount += 1;
+          continue;
+        }
+        const data = await response.json().catch(() => ({}));
+        if (Array.isArray(data.conflicts)) {
+          conflictTitles.push(...data.conflicts.map((item: { title?: string }) => item.title).filter(Boolean));
+        }
+        if (!response.ok) throw new Error(data.error ?? "保存失败");
       }
       reset();
+      if (queuedCount > 0) {
+        setInfo(`${queuedCount} 项已离线暂存，联网后会自动加入日历。`);
+      } else if (conflictTitles.length > 0) {
+        setInfo(`已添加，但与以下日程时间重叠：${conflictTitles.join("、")}`);
+      }
       router.refresh();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "保存失败，请重试");
     } finally {
       setSaving(false);
     }
@@ -235,12 +258,12 @@ export default function AiInput() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#eef2f7] via-[#eef2f7]/90 to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-8">
-      <div className="mx-auto w-full max-w-3xl md:max-w-5xl">
+    <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#f5faff] via-[#f5faff]/95 to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-10">
+      <div className="mx-auto w-full max-w-6xl">
         {status === "action" && actionResult?.event && (
-          <div className="mb-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
+          <div className="ui-card mb-3 p-4">
             <p className="text-sm">{actionResult.message}</p>
-            <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+            <p className="mt-2 rounded-xl bg-sky-50 px-3 py-2.5 text-xs text-sky-900/70">
               {actionResult.event.title} · {actionResult.event.date}
               {actionResult.event.time ? ` ${actionResult.event.time}` : ""}
               {actionResult.event.repeat ? ` · 重复：${repeatLabel(actionResult.event.repeat)}` : ""}
@@ -249,7 +272,7 @@ export default function AiInput() {
               <button
                 onClick={confirmAction}
                 disabled={saving}
-                className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+                className="ui-button-primary h-10 px-4 text-sm"
               >
                 {saving
                   ? "处理中…"
@@ -259,7 +282,7 @@ export default function AiInput() {
                       ? "确认完成"
                       : "确认修改"}
               </button>
-              <button onClick={reset} className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100">
+              <button onClick={reset} className="ui-button-ghost h-10 px-3 text-sm">
                 取消
               </button>
             </div>
@@ -267,13 +290,13 @@ export default function AiInput() {
         )}
 
         {info && (
-          <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
-            <p className="text-sm text-blue-800">{info}</p>
+          <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 p-3">
+            <p className="text-sm text-sky-800">{info}</p>
           </div>
         )}
 
         {status === "asking" && result && (
-          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/90 p-3">
             <p className="text-sm text-amber-800">{result.message}</p>
             <div className="mt-2 flex gap-2">
               <input
@@ -281,15 +304,15 @@ export default function AiInput() {
                 onChange={(e) => setReply(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && reply.trim() && parse(reply)}
                 placeholder="补充信息，例如：晚上八点"
-                className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                className="ui-input h-10 flex-1 border-amber-200 px-3 text-sm focus:border-amber-400"
               />
               <button
                 onClick={() => reply.trim() && parse(reply)}
-                className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm text-white hover:bg-amber-500"
+                className="ui-button-primary h-10 bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-sm"
               >
                 继续
               </button>
-              <button onClick={reset} className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100">
+              <button onClick={reset} className="ui-button-ghost h-10 px-3 text-sm">
                 取消
               </button>
             </div>
@@ -297,11 +320,11 @@ export default function AiInput() {
         )}
 
         {status === "preview" && result && (
-          <div className="mb-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
+          <div className="ui-card mb-3 p-4">
             <p className="text-xs text-zinc-400">AI 已理解，确认后保存</p>
             <ul className="mt-2 flex flex-col gap-2">
               {result.events.map((ev, i) => (
-                <li key={i} className="flex items-center gap-3 rounded-lg bg-zinc-50 px-3 py-2">
+                <li key={i} className="flex items-center gap-3 rounded-xl bg-sky-50/80 px-3 py-2.5">
                   <span className="w-14 shrink-0 text-sm font-medium">{ev.time ?? "全天"}</span>
                   <span className="text-sm">{ev.title}</span>
                   <span className="ml-auto text-xs text-zinc-400">{ev.date}</span>
@@ -318,11 +341,11 @@ export default function AiInput() {
               <button
                 onClick={saveAll}
                 disabled={saving}
-                className="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+                className="ui-button-primary h-10 px-4 text-sm"
               >
                 {saving ? "保存中…" : "确认添加"}
               </button>
-              <button onClick={reset} className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100">
+              <button onClick={reset} className="ui-button-ghost h-10 px-3 text-sm">
                 取消
               </button>
             </div>
@@ -331,12 +354,12 @@ export default function AiInput() {
 
         {error && <p className="mb-2 text-center text-sm text-red-500">{error}</p>}
 
-        <div className="flex items-end gap-2 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
+        <div className="ui-card flex items-end gap-2 p-2">
           <button
             onClick={toggleVoice}
             title="语音输入"
-            className={`shrink-0 rounded-xl px-3 py-2 text-lg transition-colors ${
-              listening ? "bg-red-500 text-white" : "text-zinc-400 hover:bg-zinc-100"
+            className={`h-10 w-11 shrink-0 rounded-xl px-0 text-lg transition-colors ${
+              listening ? "bg-rose-500 text-white shadow-sm" : "ui-button-secondary text-sky-700"
             }`}
           >
             {listening ? "◉" : "🎤"}
@@ -351,12 +374,12 @@ export default function AiInput() {
                 : "告诉 AI 你要做什么，例如：明天下午三点开会；或：把学习改到晚上九点"
             }
             disabled={status === "parsing"}
-            className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none"
+            className="min-h-10 min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none"
           />
           <button
             onClick={() => text.trim() && submit(text)}
             disabled={status === "parsing" || !text.trim()}
-            className="shrink-0 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+            className="ui-button-primary h-10 shrink-0 px-4 text-sm"
           >
             发送
           </button>

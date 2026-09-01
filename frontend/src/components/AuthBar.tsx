@@ -15,7 +15,7 @@ export default function AuthBar({ email }: { email: string }) {
       <span className="max-w-[10rem] truncate text-sm text-zinc-500">{email}</span>
       <button
         onClick={logout}
-        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-100"
+        className="ui-button-secondary h-10 px-3 text-sm"
       >
         退出
       </button>

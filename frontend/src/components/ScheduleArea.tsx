@@ -124,7 +124,12 @@ export default function ScheduleArea({
   useEffect(() => {
     const onOnline = () => void load(date, view);
     window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
+    const onOfflineSync = () => void load(date, view);
+    window.addEventListener("aical:offline-sync", onOfflineSync);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("aical:offline-sync", onOfflineSync);
+    };
   }, [date, load, view]);
 
   let exportFrom = date;
@@ -143,19 +148,18 @@ export default function ScheduleArea({
           .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0] ?? null)
       : null;
 
-  const menuItem =
-    "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-100";
+  const menuItem = "ui-menu-item";
 
   return (
-    <section className="mt-3">
+    <section className="mt-5">
       {/* 主功能栏：日期切换 + 视图 + 更多菜单 */}
-      <div className="mb-2 flex items-center gap-1.5">
+      <div className="mb-3 flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <DateNav date={date} view={view} onNavigate={navigate} />
         </div>
         <button
           onClick={() => setMenuOpen(true)}
-          className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-lg leading-none text-zinc-600 hover:bg-zinc-100 md:px-4 md:py-2"
+          className="ui-button-secondary h-10 w-11 shrink-0 px-0 text-lg leading-none"
           title="更多功能"
           aria-label="更多功能"
         >
@@ -165,7 +169,7 @@ export default function ScheduleArea({
 
       {/* 搜索行（点菜单里的"搜索"展开） */}
       {searchOpen && (
-        <div className="mb-2 flex items-center gap-1.5">
+        <div className="mb-3 flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <SearchBar query={query} onSearch={search} />
           </div>
@@ -174,7 +178,7 @@ export default function ScheduleArea({
               setSearchOpen(false);
               if (query) search("");
             }}
-            className="shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100"
+            className="ui-button-secondary h-10 w-10 shrink-0 px-0 text-sm"
             title="关闭搜索"
           >
             ✕
@@ -183,27 +187,25 @@ export default function ScheduleArea({
       )}
 
       {upcoming && (
-        <p className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800">
+        <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-xs text-emerald-800 shadow-sm">
           下一项：{upcoming.startTime} {upcoming.title}
         </p>
       )}
       {offline && (
-        <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
+        <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-800 shadow-sm">
           离线模式：当前显示本地缓存的日程（网络恢复后自动更新）
         </p>
       )}
 
       {view === "day" && (
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs text-zinc-400">{events.length} 项</span>
-          <div className="flex rounded-lg bg-zinc-200/70 p-0.5" aria-label="单日显示方式">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-xs font-medium text-sky-700/70">{events.length} 项</span>
+          <div className="ui-segment" aria-label="单日显示方式">
             {(["list", "timeline"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setDayMode(mode)}
-                className={`rounded-md px-3 py-1 text-xs ${
-                  dayMode === mode ? "bg-white font-medium text-zinc-800 shadow-sm" : "text-zinc-500"
-                }`}
+                className={dayMode === mode ? "ui-segment-active" : "ui-segment-item"}
               >
                 {mode === "list" ? "事项" : "时间线"}
               </button>
@@ -244,8 +246,8 @@ export default function ScheduleArea({
       {menuOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/30" onClick={() => setMenuOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl">
-            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-zinc-200" />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-sky-100 bg-white/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl backdrop-blur">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-sky-200" />
             <button
               className={menuItem}
               onClick={() => {
@@ -268,7 +270,7 @@ export default function ScheduleArea({
             >
               📒 笔记本（不确定时间的事）
             </Link>
-            <div className="flex items-center gap-2 px-3 py-1">
+            <div className="flex items-center gap-2 px-1 py-2">
               <span className="flex-1" />
               <ExportButton from={exportFrom} to={exportTo} />
               <ImportButton />

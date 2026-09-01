@@ -81,6 +81,19 @@ async function main() {
   const originalId = original.data?.event?.id;
   check("建立原有日程基线", original.status === 201 && originalId);
 
+  const conflictCandidate = await api("/api/events", {
+    method: "POST",
+    body: { title: "冲突提示样本", date: "2026-09-01", time: "09:30", endTime: "10:30" },
+  });
+  check(
+    "新建日程后返回同日冲突提示",
+    conflictCandidate.status === 201 && conflictCandidate.data?.conflicts?.some((event) => event.title === "原有日程"),
+    JSON.stringify(conflictCandidate.data)
+  );
+  if (conflictCandidate.data?.event?.id) {
+    await api(`/api/events/${conflictCandidate.data.event.id}`, { method: "DELETE" });
+  }
+
   const utcEvent = [
     "BEGIN:VEVENT",
     "UID:external-utc@example.test",
@@ -192,6 +205,45 @@ async function main() {
     body: { title: "非法时间", date: "2026-09-01", time: "25:00" },
   });
   check("拒绝非法时间格式", invalidFormat.status === 400, JSON.stringify(invalidFormat.data));
+
+  const repeatBase = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "重复系列编辑基线",
+      date: "2026-09-07",
+      time: "14:00",
+      endTime: "15:00",
+      repeat: "weekly",
+    },
+  });
+  const repeatId = repeatBase.data?.event?.id;
+  const singleEdit = await api(`/api/events/${repeatId}`, {
+    method: "PATCH",
+    body: {
+      mode: "single",
+      occurrenceDate: "2026-09-14",
+      date: "2026-09-14",
+      title: "只改这一周",
+      time: "16:00",
+      endTime: "17:00",
+    },
+  });
+  const singleDate = await api("/api/events?date=2026-09-14");
+  const futureDate = await api("/api/events?date=2026-09-21");
+  const singleEvent = singleDate.data?.events?.find((event) => event.title === "只改这一周");
+  const futureSeries = futureDate.data?.events?.find((event) => event.id === repeatId);
+  check(
+    "重复日程仅本次编辑不影响后续系列",
+    singleEdit.status === 200 && singleEvent?.startTime === "16:00" && futureSeries?.startTime === "14:00",
+    JSON.stringify({ singleEdit: singleEdit.data, singleEvent, futureSeries })
+  );
+  const deletedSeries = await api(`/api/events/${repeatId}`, { method: "DELETE" });
+  const afterSeriesDelete = await api("/api/events?date=2026-09-14");
+  check(
+    "删除整个系列时同时清理单次编辑副本",
+    deletedSeries.status === 200 && !afterSeriesDelete.data?.events?.some((event) => event.title === "只改这一周"),
+    JSON.stringify(afterSeriesDelete.data)
+  );
 
   const compatibilityIcs = [
     "BEGIN:VCALENDAR",

@@ -17,6 +17,13 @@ function shift(dateStr, days) {
   return dt.toISOString().slice(0, 10);
 }
 
+function currentWeekdayDate(target) {
+  const today = todayStr();
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+  const monday = shift(today, -(weekday === 0 ? 6 : weekday - 1));
+  return shift(monday, target === 0 ? 6 : target - 1);
+}
+
 let cookie = "";
 async function parse(text) {
   const res = await fetch(`${BASE_URL}/api/ai/parse`, {
@@ -63,6 +70,22 @@ async function main() {
 
   r = await parse("每周一晚上八点健身");
   check("每周一 → weekly 20:00", r.result.events?.[0]?.repeat === "weekly" && r.result.events?.[0]?.time === "20:00", JSON.stringify(r.result));
+
+  r = await parse("本周三和周四晚上九点新生扫楼宣传");
+  const currentWeekDates = new Set([currentWeekdayDate(3), currentWeekdayDate(4)]);
+  check(
+    "本周三和周四晚上九点 → 两条一次性 21:00",
+    r.result.events?.length === 2 &&
+      r.result.events.every((e) => e.title === "新生扫楼宣传" && e.time === "21:00" && e.repeat === null && currentWeekDates.has(e.date)),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("本周周三和周四晚上九点新生扫楼宣传");
+  check(
+    "本周周三和周四 → 兼容重复星期词",
+    r.result.events?.length === 2 && r.result.events.every((e) => e.time === "21:00" && e.repeat === null),
+    JSON.stringify(r.result)
+  );
 
   const D1 = shift("2026-08-31", -1);
   r = await parse("8月31号前完成实验报告");

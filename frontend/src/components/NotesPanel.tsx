@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParseResult } from "../../../backend/ai/types";
 
@@ -45,24 +45,6 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
   const [error, setError] = useState("");
   const [convert, setConvert] = useState<ConvertState | null>(null);
   const [returning, setReturning] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/notes");
-        if (!cancelled && res.ok) {
-          const data = await res.json();
-          setNotes(Array.isArray(data.notes) ? data.notes : []);
-        }
-      } catch {
-        // 保留服务端传入的初始列表，网络恢复后用户仍可手动操作。
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function addNote() {
     const text = input.trim();
@@ -267,7 +249,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
     }
   }
 
-  const rowBtn = "rounded-lg px-2 py-1 text-xs hover:bg-zinc-100";
+  const rowBtn = "ui-button-ghost h-9 px-2 text-xs";
   const doneCount = notes.filter((n) => n.done).length;
 
   function returnToCalendar() {
@@ -293,7 +275,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
           type="button"
           onClick={returnToCalendar}
           disabled={returning}
-          className="text-sm text-zinc-500 hover:text-zinc-700 disabled:opacity-50"
+          className="ui-button-ghost h-10 px-3 text-sm"
         >
           {returning ? "返回中…" : "← 返回日历"}
         </button>
@@ -303,19 +285,19 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
       </p>
 
       {/* 添加输入 */}
-      <div className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-sm">
+      <div className="ui-card mt-5 flex items-center gap-2 p-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addNote()}
           placeholder="写下一件不确定什么时候做的事…"
           maxLength={500}
-          className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-sm outline-none"
+          className="min-h-10 min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none"
         />
         <button
           onClick={addNote}
           disabled={adding || !input.trim()}
-          className="shrink-0 rounded-lg bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-40"
+          className="ui-button-primary h-10 shrink-0 px-4 text-sm"
         >
           {adding ? "添加中…" : "添加"}
         </button>
@@ -326,14 +308,14 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
       {/* 列表 */}
       <div className="mt-4 flex flex-col gap-2">
         {notes.length === 0 && (
-          <p className="rounded-xl border border-dashed border-zinc-300 bg-white/60 px-4 py-8 text-center text-sm text-zinc-400">
+          <p className="ui-card border-dashed bg-white/75 px-4 py-10 text-center text-sm text-zinc-400">
             还没有内容，把「不确定什么时候做」的事先记在这里
           </p>
         )}
         {notes.map((note) => (
           <div
             key={note.id}
-            className={`flex items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm ${
+            className={`ui-card flex items-center gap-2.5 px-4 py-3 transition-shadow hover:shadow-md ${
               note.done ? "opacity-60" : ""
             }`}
           >
@@ -353,7 +335,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
                   if (e.key === "Escape") setEditingId(null);
                 }}
                 autoFocus
-                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-sm outline-none focus:border-zinc-500"
+                className="ui-input min-w-0 flex-1 px-3 text-sm"
               />
             ) : (
               <span
@@ -403,7 +385,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
       {doneCount > 0 && (
         <button
           onClick={() => void clearDone()}
-          className="mt-4 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100"
+          className="ui-button-secondary mt-5 h-10 w-full text-sm"
         >
           清除已完成（{doneCount}）
         </button>
@@ -413,12 +395,12 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
       {convert && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setConvert(null)} />
-          <div className="relative w-full max-w-lg rounded-t-2xl bg-white p-4 shadow-2xl md:rounded-2xl md:p-5">
+          <div className="ui-card relative w-full max-w-lg rounded-t-3xl p-5 shadow-2xl md:rounded-3xl md:p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-zinc-800">⏰ 转为日程</h2>
               <button
                 onClick={() => setConvert(null)}
-                className="rounded-lg px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-100"
+                className="ui-button-ghost h-9 w-9 px-0 text-sm"
               >
                 ✕
               </button>
@@ -440,11 +422,11 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
                     onKeyDown={(e) => e.key === "Enter" && convert.reply.trim() && void parseForConvert(convert.reply, convert.context ?? undefined)}
                     placeholder="补充信息，例如：下周三下午三点"
                     autoFocus
-                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                    className="ui-input h-10 min-w-0 flex-1 px-3 text-sm"
                   />
                   <button
                     onClick={() => convert.reply.trim() && void parseForConvert(convert.reply, convert.context ?? undefined)}
-                    className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700"
+                    className="ui-button-primary h-10 shrink-0 px-4 text-sm"
                   >
                     继续
                   </button>
@@ -455,25 +437,25 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
             {convert.step === "preview" && convert.result && (
               <div className="mt-3">
                 {convert.result.events.length === 1 ? (
-                  <div className="flex flex-col gap-2 rounded-xl bg-zinc-50 p-3">
+                  <div className="flex flex-col gap-2 rounded-xl bg-sky-50/70 p-4">
                     <input
                       value={convert.title}
                       onChange={(e) => setConvert({ ...convert, title: e.target.value })}
                       placeholder="标题"
-                      className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                    className="ui-input w-full px-3 text-sm"
                     />
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         type="date"
                         value={convert.date}
                         onChange={(e) => setConvert({ ...convert, date: e.target.value })}
-                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                        className="ui-input flex-1 px-3 text-sm"
                       />
                       <input
                         type="time"
                         value={convert.time}
                         onChange={(e) => setConvert({ ...convert, time: e.target.value })}
-                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                        className="ui-input flex-1 px-3 text-sm"
                       />
                     </div>
                     {convert.result.events[0]?.repeat && (
@@ -486,7 +468,7 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
                     )}
                   </div>
                 ) : (
-                  <ul className="flex flex-col gap-1.5 rounded-xl bg-zinc-50 p-3">
+                  <ul className="flex flex-col gap-2 rounded-xl bg-sky-50/70 p-4">
                     {convert.result.events.map((ev, i) => (
                       <li key={i} className="flex items-center gap-3 text-sm">
                         <span className="w-14 shrink-0 font-medium">{ev.time ?? "全天"}</span>
@@ -502,13 +484,13 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
                   <button
                     onClick={() => void confirmConvert()}
                     disabled={convert.saving}
-                    className="flex-1 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                    className="ui-button-primary h-10 flex-1 px-4 text-sm"
                   >
                     {convert.saving ? "保存中…" : "确认转为日程"}
                   </button>
                   <button
                     onClick={() => setConvert(null)}
-                    className="rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-500 hover:bg-zinc-100"
+                    className="ui-button-secondary h-10 px-4 text-sm"
                   >
                     取消
                   </button>

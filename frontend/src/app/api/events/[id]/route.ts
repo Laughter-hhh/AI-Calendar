@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { deleteEvent, deleteSingleOccurrence, updateEvent } from "@/lib/events";
+import { deleteEvent, deleteSingleOccurrence, findEventConflicts, updateEvent, updateSingleOccurrence } from "@/lib/events";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { EventValidationError } from "@/lib/event-validation";
 import { isValidDateStr } from "@/lib/date";
@@ -20,22 +20,30 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.date !== undefined && (typeof body.date !== "string" || !isValidDateStr(body.date))) {
     return NextResponse.json({ error: "日期格式不正确" }, { status: 400 });
   }
+  const mode = body.mode === "single" ? "single" : "series";
+  const occurrenceDate = typeof body.occurrenceDate === "string" ? body.occurrenceDate : body.date;
+  if (mode === "single" && (typeof occurrenceDate !== "string" || !isValidDateStr(occurrenceDate))) {
+    return NextResponse.json({ error: "缺少重复日程的发生日期" }, { status: 400 });
+  }
+  const eventData = {
+    title: typeof body.title === "string" ? body.title : undefined,
+    date: typeof body.date === "string" ? body.date : undefined,
+    time: body.time !== undefined ? (typeof body.time === "string" && body.time ? body.time : null) : undefined,
+    endTime: body.endTime !== undefined ? (typeof body.endTime === "string" && body.endTime ? body.endTime : null) : undefined,
+    note: body.note !== undefined ? (typeof body.note === "string" && body.note ? body.note : null) : undefined,
+    repeat: body.repeat !== undefined ? (typeof body.repeat === "string" && body.repeat ? body.repeat : null) : undefined,
+    repeatUntil:
+      body.repeatUntil !== undefined
+        ? (typeof body.repeatUntil === "string" && body.repeatUntil ? body.repeatUntil : null)
+        : undefined,
+    color: body.color !== undefined ? (typeof body.color === "string" && body.color ? body.color : null) : undefined,
+    done: body.done !== undefined ? body.done === true : undefined,
+  };
   let event;
   try {
-    event = updateEvent(user.id, eventId, {
-      title: typeof body.title === "string" ? body.title : undefined,
-      date: typeof body.date === "string" ? body.date : undefined,
-      time: body.time !== undefined ? (typeof body.time === "string" && body.time ? body.time : null) : undefined,
-      endTime: body.endTime !== undefined ? (typeof body.endTime === "string" && body.endTime ? body.endTime : null) : undefined,
-      note: body.note !== undefined ? (typeof body.note === "string" && body.note ? body.note : null) : undefined,
-      repeat: body.repeat !== undefined ? (typeof body.repeat === "string" && body.repeat ? body.repeat : null) : undefined,
-      repeatUntil:
-        body.repeatUntil !== undefined
-          ? (typeof body.repeatUntil === "string" && body.repeatUntil ? body.repeatUntil : null)
-          : undefined,
-      color: body.color !== undefined ? (typeof body.color === "string" && body.color ? body.color : null) : undefined,
-      done: body.done !== undefined ? body.done === true : undefined,
-    });
+    event = mode === "single"
+      ? updateSingleOccurrence(user.id, eventId, occurrenceDate as string, eventData)
+      : updateEvent(user.id, eventId, eventData);
   } catch (error) {
     if (error instanceof EventValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -44,7 +52,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   if (!event) return NextResponse.json({ error: "事件不存在" }, { status: 404 });
-  return NextResponse.json({ event });
+  const conflicts = findEventConflicts(user.id, event.date, event.startTime, event.endTime, event.id);
+  return NextResponse.json({ event, conflicts });
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {

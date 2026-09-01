@@ -10,7 +10,7 @@ const APK_URL = "/api/download/ai-calendar.apk";
 
 export default function DownloadPage() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-12">
+    <main className="mx-auto w-full max-w-3xl px-4 py-12 md:px-8">
       <h1 className="text-2xl font-bold">下载安卓 App</h1>
       <p className="mt-2 text-sm text-zinc-500">
         AI Calendar 安卓安装包（APK）：独立应用，无需安装 Expo Go，登录后与网页版数据同步。
@@ -18,12 +18,12 @@ export default function DownloadPage() {
 
       <a
         href={APK_URL}
-        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-700"
+        className="ui-button-primary mt-7 h-12 px-6 text-sm"
       >
         ⬇ 下载 APK 安装包
       </a>
 
-      <section className="mt-8 rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
+      <section className="ui-card mt-8 p-6 text-sm text-zinc-600">
         <h2 className="text-base font-semibold text-zinc-800">安装步骤</h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5">
           <li>点击上方按钮下载 APK 文件</li>
@@ -33,7 +33,7 @@ export default function DownloadPage() {
         </ol>
       </section>
 
-      <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
+      <section className="ui-card mt-4 p-6 text-sm text-zinc-600">
         <h2 className="text-base font-semibold text-zinc-800">iPhone（iOS）用户</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>
@@ -49,7 +49,7 @@ export default function DownloadPage() {
         </ul>
       </section>
 
-      <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600">
+      <section className="ui-card mt-4 p-6 text-sm text-zinc-600">
         <h2 className="text-base font-semibold text-zinc-800">说明</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>当前为安卓版（Android 7.0+）。iOS 用户可用上方「添加到主屏幕」方式使用。</li>

@@ -75,6 +75,30 @@ export function resolveDate(text: string): { date: string; rest: string } | null
   return null;
 }
 
+/** 解析“本周三和周四”这类当前周的多个一次性日期。 */
+export function resolveCurrentWeekdayList(text: string): { dates: string[]; rest: string } | null {
+  const phrase = text.match(
+    /(?:本|这)(?:周|星期|礼拜)\s*(?:(?:周|星期|礼拜)\s*)?[日天一二三四五六](?:(?:\s*(?:和|、|及|以及|,|，)\s*)(?:(?:本|这)?(?:周|星期|礼拜))?\s*[日天一二三四五六])+/
+  );
+  if (!phrase) return null;
+
+  const weekdays = phrase[0].match(/[日天一二三四五六]/g) ?? [];
+  if (weekdays.length < 2) return null;
+
+  const today = todayStr();
+  const todayWeekday = weekdayOf(today);
+  const monday = addDaysStr(today, -(todayWeekday === 0 ? 6 : todayWeekday - 1));
+  const dates = [...new Set(weekdays.map((day) => {
+    const target = WEEKDAY_NAME[day];
+    return addDaysStr(monday, target === 0 ? 6 : target - 1);
+  }))];
+
+  return {
+    dates,
+    rest: text.replace(phrase[0], " ").replace(/\s+/g, " ").trim(),
+  };
+}
+
 /** 解析时间表达，返回 { time, endTime, 去掉时间词后的剩余文本 } */
 export function resolveTime(text: string): { time: string | null; endTime: string | null; rest: string } {
   let rest = text;
@@ -207,6 +231,10 @@ export const localParser: AIParser = {
       }
     }
 
+    // “本周/这周”表示当前周的有限日期集合，不是每周重复。
+    const currentWeekdays = resolveCurrentWeekdayList(rest);
+    if (currentWeekdays) rest = currentWeekdays.rest;
+
     // 2.5 截止日期提醒任务："8月31号前完成实验报告" → 截止前 7/3/1 天 + 当天各一条待办
     let deadlineDate: string | null = null;
     const deadlineMatch = rest.match(
@@ -224,8 +252,8 @@ export const localParser: AIParser = {
     }
 
     // 3. 日期（重复规则可自带起始日，如"每周一"）
-    const resolvedDate = resolveDate(rest);
-    const date = context?.date ?? resolvedDate?.date ?? repeatStart ?? null;
+    const resolvedDate = currentWeekdays ? null : resolveDate(rest);
+    const date = context?.date ?? resolvedDate?.date ?? currentWeekdays?.dates[0] ?? repeatStart ?? null;
     if (resolvedDate) rest = resolvedDate.rest;
 
     // 4. 时间
@@ -280,14 +308,15 @@ export const localParser: AIParser = {
         });
       }
     } else if (title && startDate) {
-      for (let i = 0; i < (repeatDays > 0 ? repeatDays : 1); i++) {
+      const eventDates = currentWeekdays?.dates ?? null;
+      for (let i = 0; i < (eventDates?.length ?? (repeatDays > 0 ? repeatDays : 1)); i++) {
         events.push({
           title,
-          date: repeatDays > 0 ? addDaysStr(startDate, i) : startDate,
+          date: eventDates?.[i] ?? (repeatDays > 0 ? addDaysStr(startDate, i) : startDate),
           time,
           endTime: resolvedTime.endTime,
-          repeat: repeatDays > 0 ? null : repeat,
-          repeatUntil: repeatDays > 0 ? null : repeatUntil,
+          repeat: repeatDays > 0 || eventDates ? null : repeat,
+          repeatUntil: repeatDays > 0 || eventDates ? null : repeatUntil,
           note: undefined,
         });
       }
@@ -303,6 +332,8 @@ export const localParser: AIParser = {
       if (time) recognized.push(time);
       const echo = recognized.length > 0 ? `已识别：${recognized.join(" ")}。` : "";
       message = `${echo}还差一点信息：${missing.map((k) => names[k]).join("、")}。请告诉我。`;
+    } else if (currentWeekdays) {
+      message = `已为你安排本周 ${currentWeekdays.dates.length} 天的日程。`;
     } else if (repeatDays > 0) {
       message = `已为你安排从 ${startDate} 起连续 ${repeatDays} 天的日程。`;
     } else if (repeat) {

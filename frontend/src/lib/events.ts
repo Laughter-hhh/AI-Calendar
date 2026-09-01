@@ -16,6 +16,8 @@ export interface CalendarEvent {
   color: string | null;
   done: boolean;
   sourceText: string | null;
+  /** 最近一次修改时间，为未来跨设备同步提供增量游标 */
+  updatedAt: string;
   /** 共享来源：他人共享的事件带对方邮箱，本人事件为 null */
   ownerEmail?: string | null;
 }
@@ -32,6 +34,7 @@ export interface NewEvent {
   done?: boolean;
   sourceText?: string | null;
   externalUid?: string | null;
+  seriesId?: number | null;
 }
 
 export interface ImportedEvent extends NewEvent {
@@ -51,6 +54,7 @@ function mapRow(row: Record<string, unknown>): CalendarEvent {
     color: row.color === null ? null : String(row.color),
     done: Number(row.done) === 1,
     sourceText: row.source_text === null ? null : String(row.source_text),
+    updatedAt: row.updated_at === null || row.updated_at === undefined ? "" : String(row.updated_at),
   };
 }
 
@@ -215,14 +219,44 @@ export function listEventsRange(userId: number, from: string, to: string): Calen
   });
 }
 
+/** 查找同一日期内的时间重叠事件。仅提示，不阻止创建或修改。 */
+export function findEventConflicts(
+  userId: number,
+  date: string,
+  startTime: string | null,
+  endTime: string | null,
+  excludeId?: number
+): CalendarEvent[] {
+  if (!startTime) return [];
+  const start = clockMinutes(startTime);
+  if (start === null) return [];
+  const end = Math.min(24 * 60, Math.max(start + 30, clockMinutes(endTime) ?? start + 60));
+  return listEvents(userId, date).filter((candidate) => {
+    if (candidate.id === excludeId || !candidate.startTime) return false;
+    const candidateStart = clockMinutes(candidate.startTime);
+    if (candidateStart === null) return false;
+    const candidateEnd = Math.min(
+      24 * 60,
+      Math.max(candidateStart + 30, clockMinutes(candidate.endTime) ?? candidateStart + 60)
+    );
+    return start < candidateEnd && candidateStart < end;
+  });
+}
+
+function clockMinutes(value: string | null): number | null {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) return null;
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {
   assertValidEventTiming(data.time, data.endTime ?? null);
   // 未指定颜色时，自动随机分配一个非灰色（跳过 EVENT_COLORS 第一项"无"）
   const color = data.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
   const info = getDb()
     .prepare(
-      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid, series_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       userId,
@@ -236,7 +270,8 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
       color,
       data.done ? 1 : 0,
       data.sourceText ?? null,
-      data.externalUid ?? null
+      data.externalUid ?? null,
+      data.seriesId ?? null
     );
   return {
     id: Number(info.lastInsertRowid),
@@ -250,6 +285,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
     color,
     done: data.done === true,
     sourceText: data.sourceText ?? null,
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -341,12 +377,13 @@ export function updateEvent(
     done: data.done !== undefined ? data.done === true : Number(existing.done) === 1,
     sourceText: data.sourceText !== undefined ? data.sourceText : (existing.source_text as string | null),
     externalUid: existing.external_uid as string | null,
+    seriesId: existing.series_id === null || existing.series_id === undefined ? null : Number(existing.series_id),
   };
   assertValidEventTiming(merged.time, merged.endTime);
 
   db.prepare(
     `UPDATE events
-     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, color = ?, done = ?, source_text = ?
+     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, color = ?, done = ?, source_text = ?, updated_at = datetime('now')
      WHERE id = ? AND user_id = ?`
   ).run(
     merged.title,
@@ -369,8 +406,57 @@ export function updateEvent(
   return mapRow(updated);
 }
 
+/**
+ * 仅修改重复系列中的某一次：复制为一个独立事件，并把原重复事件的该日期记为例外。
+ * 这样不会影响系列的其它日期，也无需把例外内容混入基础事件记录。
+ */
+export function updateSingleOccurrence(
+  userId: number,
+  eventId: number,
+  occurrenceDate: string,
+  data: Partial<NewEvent>
+): CalendarEvent | null {
+  const db = getDb();
+  const existing = db
+    .prepare("SELECT * FROM events WHERE id = ? AND user_id = ?")
+    .get(eventId, userId) as Record<string, unknown> | undefined;
+  if (!existing) return null;
+
+  const repeat = existing.repeat === null ? null : String(existing.repeat);
+  if (!repeat) return updateEvent(userId, eventId, data);
+
+  const event: NewEvent = {
+    title: data.title?.trim() || String(existing.title),
+    date: data.date || occurrenceDate,
+    time: data.time !== undefined ? data.time : (existing.start_time as string | null),
+    endTime: data.endTime !== undefined ? data.endTime : (existing.end_time as string | null),
+    note: data.note !== undefined ? data.note : (existing.note as string | null),
+    repeat: null,
+    repeatUntil: null,
+    color: data.color !== undefined ? data.color : (existing.color as string | null),
+    done: data.done !== undefined ? data.done : Number(existing.done) === 1,
+    sourceText: data.sourceText !== undefined ? data.sourceText : (existing.source_text as string | null),
+    externalUid: null,
+    seriesId: eventId,
+  };
+  assertValidEventTiming(event.time, event.endTime ?? null);
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const copy = createEvent(userId, event);
+    db.prepare("INSERT OR IGNORE INTO event_exceptions (event_id, date) VALUES (?, ?)").run(eventId, occurrenceDate);
+    db.exec("COMMIT");
+    return copy;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 export function deleteEvent(userId: number, eventId: number): boolean {
-  const info = getDb().prepare("DELETE FROM events WHERE id = ? AND user_id = ?").run(eventId, userId);
+  const info = getDb()
+    .prepare("DELETE FROM events WHERE user_id = ? AND (id = ? OR series_id = ?)")
+    .run(userId, eventId, eventId);
   return info.changes > 0;
 }
 

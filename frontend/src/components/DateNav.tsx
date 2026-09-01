@@ -18,34 +18,32 @@ export default function DateNav({
   }
 
   const isCurrent = view === "month" ? date.slice(0, 7) === todayStr().slice(0, 7) : date === todayStr();
-  const btn =
-    "shrink-0 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 md:px-3 md:py-2 md:text-sm";
-  const seg = (active: boolean) =>
-    active
-      ? "shrink-0 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white md:px-3 md:py-2 md:text-sm"
-      : "shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 md:px-3 md:py-2 md:text-sm";
+  const btn = "ui-button-secondary h-10 min-w-10 px-3 text-sm";
+  const seg = (active: boolean) => (active ? "ui-segment-active flex-1 sm:flex-none" : "ui-segment-item flex-1 sm:flex-none");
 
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm">
-      <button onClick={() => onNavigate(shift(date, -1, view), view)} className={btn}>
+    <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <button onClick={() => onNavigate(shift(date, -1, view), view)} className={btn} aria-label="上一个周期">
         ‹
       </button>
       <input
         type={view === "month" ? "month" : "date"}
         value={view === "month" ? date.slice(0, 7) : date}
         onChange={(e) => e.target.value && onNavigate(view === "month" ? `${e.target.value}-01` : e.target.value, view)}
-        className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-1.5 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-400 md:w-40 md:flex-none md:px-3 md:py-2 md:text-sm"
+        className="ui-input h-10 min-w-0 w-full px-3 text-sm sm:w-44 sm:flex-none"
       />
-      <button onClick={() => onNavigate(shift(date, 1, view), view)} className={btn}>
+      <button onClick={() => onNavigate(shift(date, 1, view), view)} className={btn} aria-label="下一个周期">
         ›
       </button>
       {!isCurrent && (
-        <button onClick={() => onNavigate(todayStr(), view)} className={`${btn} md:px-3`} title="回到今天">
-          今
+        <button onClick={() => onNavigate(todayStr(), view)} className={`${btn} px-3`} title="回到今天">
+          今天
         </button>
       )}
+      </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="ui-segment w-full sm:ml-auto sm:w-auto">
         {(["day", "week", "month"] as const).map((v) => (
           <button
             key={v}

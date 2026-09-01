@@ -45,7 +45,9 @@ CREATE TABLE IF NOT EXISTS events (
   done        INTEGER NOT NULL DEFAULT 0,
   source_text TEXT,
   external_uid TEXT,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  series_id   INTEGER REFERENCES events(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, event_date);
 CREATE TABLE IF NOT EXISTS event_exceptions (
@@ -83,6 +85,12 @@ function ensureEventsColumns(db: DatabaseSync): void {
   }
   if (!cols.some((c) => c.name === "external_uid")) {
     db.exec("ALTER TABLE events ADD COLUMN external_uid TEXT");
+  }
+  if (!cols.some((c) => c.name === "updated_at")) {
+    db.exec("ALTER TABLE events ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
+  }
+  if (!cols.some((c) => c.name === "series_id")) {
+    db.exec("ALTER TABLE events ADD COLUMN series_id INTEGER REFERENCES events(id) ON DELETE CASCADE");
   }
 }
 

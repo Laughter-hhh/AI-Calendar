@@ -1,12 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #eef2f7;
-  --foreground: #18181b;
+  --background: #f5faff;
+  --foreground: #172033;
+  --surface: rgba(255, 255, 255, 0.92);
+  --border: #dce8f5;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% -10%, rgba(125, 211, 252, 0.24), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(253, 186, 116, 0.2), transparent 30%),
+    var(--background);
   color: var(--foreground);
   font-family:
     ui-sans-serif,
@@ -18,4 +24,147 @@ body {
     "Hiragino Sans GB",
     "Microsoft YaHei",
     sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.ui-card {
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgba(30, 64, 175, 0.08);
+}
+
+.ui-button-primary,
+.ui-button-secondary,
+.ui-button-ghost {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.8rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.ui-button-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #0891b2);
+  box-shadow: 0 8px 18px rgba(14, 116, 144, 0.2);
+}
+
+.ui-button-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(14, 116, 144, 0.28);
+}
+
+.ui-button-secondary {
+  color: #285074;
+  border: 1px solid #c9ddf0;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 3px 10px rgba(56, 103, 148, 0.06);
+}
+
+.ui-button-secondary:hover:not(:disabled) {
+  border-color: #7dd3fc;
+  background: #effaff;
+}
+
+.ui-button-ghost {
+  color: #557089;
+  padding-inline: 0.7rem;
+}
+
+.ui-button-ghost:hover:not(:disabled) {
+  background: #eaf6ff;
+  color: #1e4f73;
+}
+
+.ui-button-primary:disabled,
+.ui-button-secondary:disabled,
+.ui-button-ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.ui-input {
+  min-height: 2.5rem;
+  border: 1px solid #cfe0ef;
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.ui-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.ui-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid #d7e8f6;
+  border-radius: 0.9rem;
+  background: #eef8ff;
+  padding: 0.25rem;
+}
+
+.ui-segment-item,
+.ui-segment-active {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  padding: 0 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.ui-segment-item {
+  color: #648097;
+}
+
+.ui-segment-item:hover {
+  color: #24516f;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ui-segment-active {
+  color: #1e3a5f;
+  background: #fff;
+  box-shadow: 0 3px 9px rgba(56, 103, 148, 0.12);
+}
+
+.ui-menu-item {
+  display: flex;
+  min-height: 2.75rem;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.8rem;
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #38566e;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.ui-menu-item:hover {
+  background: #effaff;
+  color: #1e4f73;
 }

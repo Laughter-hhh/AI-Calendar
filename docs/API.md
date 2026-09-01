@@ -93,7 +93,7 @@
 
 `PATCH /api/events/:id`，字段可部分传入（`title/date/time/endTime/note/repeat/repeatUntil`）。
 
-注意：修改重复事件会影响整个系列（系列内单日编辑未实现，见 ROADMAP）。
+注意：修改重复事件默认影响整个系列；如需只改当前发生日，请在页面编辑时选择“仅本次”，接口可传 `mode: "single"` 与 `occurrenceDate`。
 
 ### 删除
 

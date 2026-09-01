@@ -1,5 +1,5 @@
 export default function HelpPage() {
-  const section = "rounded-xl border border-zinc-200 bg-white p-4";
+  const section = "ui-card p-5 md:p-6";
   const h = "text-sm font-semibold text-zinc-800";
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-16 pt-[calc(env(safe-area-inset-top)+2rem)]">

@@ -63,47 +63,47 @@ export default function MonthView({
   const today = todayStr();
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-2 shadow-sm">
-      <div className="mb-1.5 flex items-center justify-between">
+    <div className="ui-card p-3 md:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold">{month}</h3>
-        <div className="flex gap-1 text-xs">
+        <div className="flex gap-1.5 text-xs">
           <button
             onClick={() => onMonthChange(shiftMonth(month, -1))}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-zinc-600 hover:bg-zinc-100"
+            className="ui-button-secondary h-9 px-3 text-xs"
           >
             上月
           </button>
           <button
             onClick={() => onMonthChange(monthStartOf(today))}
-            className="rounded-md bg-zinc-900 px-2 py-1 text-white hover:bg-zinc-700"
+            className="ui-button-primary h-9 px-3 text-xs"
           >
             今天
           </button>
           <button
             onClick={() => onMonthChange(shiftMonth(month, 1))}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-zinc-600 hover:bg-zinc-100"
+            className="ui-button-secondary h-9 px-3 text-xs"
           >
             下月
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg bg-zinc-200 text-center">
+      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl bg-sky-100 text-center">
         {weekdays.map((w) => (
-          <div key={w} className="bg-zinc-50 py-0.5 text-xs text-zinc-400">
+          <div key={w} className="bg-sky-50 py-2 text-xs font-medium text-sky-700/70">
             {w}
           </div>
         ))}
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} className="bg-white p-0.5" />;
+          if (!day) return <div key={`empty-${i}`} className="bg-white p-1" />;
           const dayEvents = grouped.get(day) ?? [];
           const isToday = day === today;
           return (
             <button
               key={day}
               onClick={() => onSelectDay(day)}
-              className={`flex min-h-[3.6rem] flex-col items-stretch gap-0.5 bg-white p-0.5 text-left align-top hover:bg-zinc-50 md:min-h-[6.4rem] ${
-                isToday ? "bg-zinc-100" : ""
+              className={`flex min-h-[4.6rem] flex-col items-stretch gap-1 bg-white p-1 text-left align-top hover:bg-sky-50 md:min-h-[7.2rem] ${
+                isToday ? "bg-amber-50" : ""
               }`}
             >
               <span className={`px-0.5 text-xs ${isToday ? "font-bold text-zinc-900" : "text-zinc-600"}`}>

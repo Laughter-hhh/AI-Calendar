@@ -327,6 +327,7 @@ export const localParser: AIParser = {
     // 4. 时间
     const resolvedTime = resolveTime(rest);
     let time = context?.time ?? resolvedTime.time ?? null;
+    const endTime = resolvedTime.endTime ?? context?.endTime ?? null;
     if (resolvedTime.time) rest = resolvedTime.rest;
 
     // 截止任务不设具体时间（全天待办）
@@ -383,7 +384,7 @@ export const localParser: AIParser = {
           title,
           date: eventDates?.[i] ?? (repeatDays > 0 ? addDaysStr(startDate, i) : startDate),
           time,
-          endTime: resolvedTime.endTime,
+          endTime,
           repeat: repeatDays > 0 || finiteDates ? null : repeat,
           repeatUntil: repeatDays > 0 || finiteDates ? null : repeatUntil,
           note: undefined,
@@ -418,7 +419,7 @@ export const localParser: AIParser = {
     }
 
     return Promise.resolve({
-      events: missing.length > 0 ? [{ title, date: startDate ?? "", time, repeat, repeatUntil }] : events,
+      events: missing.length > 0 ? [{ title, date: startDate ?? "", time, endTime, repeat, repeatUntil }] : events,
       missing,
       message,
     });

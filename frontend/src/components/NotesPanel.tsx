@@ -12,7 +12,7 @@ interface Note {
   createdAt: string;
 }
 
-type ParseContext = { title?: string; date?: string; time?: string };
+type ParseContext = { title?: string; date?: string; time?: string; endTime?: string };
 
 interface ConvertState {
   note: Note;
@@ -183,6 +183,7 @@ export default function NotesPanel({ initialNotes, userId }: { initialNotes: Not
                   title: ev?.title,
                   date: ev?.date,
                   time: ev?.time ?? undefined,
+                  endTime: ev?.endTime ?? undefined,
                 },
               }
             : c

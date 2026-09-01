@@ -22,7 +22,7 @@ export default function AiInput() {
   const [result, setResult] = useState<ParseResult | null>(null);
   const [actionResult, setActionResult] = useState<ActionResult | null>(null);
   const [info, setInfo] = useState("");
-  const [context, setContext] = useState<{ title?: string; date?: string; time?: string } | null>(null);
+  const [context, setContext] = useState<{ title?: string; date?: string; time?: string; endTime?: string } | null>(null);
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -83,6 +83,7 @@ export default function AiInput() {
           title: r.events[0]?.title || undefined,
           date: r.events[0]?.date || undefined,
           time: r.events[0]?.time || undefined,
+          endTime: r.events[0]?.endTime || undefined,
         });
         setStatus("asking");
       } else {

@@ -31,11 +31,11 @@ function weekdayAfter(dateStr, target) {
 }
 
 let cookie = "";
-async function parse(text) {
+async function parse(text, context) {
   const res = await fetch(`${BASE_URL}/api/ai/parse`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, context }),
   });
   const setCookie = res.headers.get("set-cookie");
   if (setCookie) cookie = setCookie.split(";")[0];
@@ -166,6 +166,19 @@ async function main() {
 
   r = await parse("晚上八点学习");
   check("晚上八点学习 → 追问日期", r.result.missing.includes("date"), JSON.stringify(r.result));
+
+  r = await parse("十五点到十八点助教开会");
+  check(
+    "缺日期的时间段保留结束时间",
+    r.result.missing.includes("date") && r.result.events?.[0]?.time === "15:00" && r.result.events?.[0]?.endTime === "18:00",
+    JSON.stringify(r.result)
+  );
+  r = await parse("明天", { title: "助教开会", time: "15:00", endTime: "18:00" });
+  check(
+    "补充日期后仍保存 15:00–18:00",
+    r.result.events?.[0]?.date === todayStr(1) && r.result.events?.[0]?.time === "15:00" && r.result.events?.[0]?.endTime === "18:00",
+    JSON.stringify(r.result)
+  );
 
   r = await parse("八点半进行实验计划与果蝇收集");
   check("八点半进行… → 08:30 且标题干净", r.result.events?.[0]?.time === "08:30" && r.result.events?.[0]?.title === "实验计划与果蝇收集", JSON.stringify(r.result));

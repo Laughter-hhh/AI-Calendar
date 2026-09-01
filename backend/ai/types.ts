@@ -34,6 +34,7 @@ export interface ParseContext {
   title?: string;
   date?: string;
   time?: string;
+  endTime?: string;
   /** 复合句中“之后每周…”的起算锚点，仅由本地解析器内部传递。 */
   afterDate?: string;
 }

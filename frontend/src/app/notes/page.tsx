@@ -20,7 +20,7 @@ export default async function NotesPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-16 pt-[calc(env(safe-area-inset-top)+2rem)]">
-      <NotesPanel initialNotes={listNotes(user.id)} />
+      <NotesPanel initialNotes={listNotes(user.id)} userId={user.id} />
     </main>
   );
 }

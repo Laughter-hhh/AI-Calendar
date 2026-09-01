@@ -59,6 +59,7 @@ export default async function Home({
         initialQuery={query}
         initialEvents={events}
         initialCurrentTime={currentTime}
+        userId={user.id}
       />
 
       <AiInput />

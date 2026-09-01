@@ -2,23 +2,133 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#fafafa" />
-    <title>AI Calendar · 离线</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8fbff" />
+    <title>AI Calendar · 离线日历</title>
     <style>
-      :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #fafafa; color: #27272a; }
-      main { width: min(22rem, calc(100% - 3rem)); padding: 2rem 1.5rem; border: 1px solid #e4e4e7; border-radius: 1rem; background: white; text-align: center; box-shadow: 0 8px 30px rgb(24 24 27 / 6%); }
-      h1 { margin: 0 0 .75rem; font-size: 1.25rem; }
-      p { margin: .5rem 0; color: #71717a; font-size: .9rem; line-height: 1.6; }
-      a { display: inline-block; margin-top: 1rem; padding: .55rem 1rem; border-radius: .6rem; background: #18181b; color: white; text-decoration: none; font-size: .9rem; }
+      :root { color-scheme: light; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fbff; color: #172033; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 10% 0%, #e0f2fe 0, transparent 32%), #f8fbff; }
+      main { width: min(100%, 40rem); min-height: 100vh; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 1.25rem) 1rem calc(env(safe-area-inset-bottom) + 1.5rem); }
+      header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+      .brand { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
+      .status { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; border: 1px solid #bae6fd; border-radius: 999px; background: #ecfeff; color: #0369a1; font-size: .75rem; font-weight: 700; }
+      .status::before { content: ""; width: .4rem; height: .4rem; border-radius: 50%; background: #f59e0b; }
+      .hero { margin-top: 1.25rem; padding: 1.1rem 1.15rem; border: 1px solid #dbeafe; border-radius: 1.25rem; background: linear-gradient(135deg, #fff 0%, #eff6ff 100%); box-shadow: 0 12px 32px rgb(30 64 175 / 8%); }
+      h1 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
+      .hero p { margin: .5rem 0 0; color: #64748b; font-size: .85rem; line-height: 1.6; }
+      .summary { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 1rem; color: #475569; font-size: .8rem; }
+      .summary strong { color: #0f172a; font-size: 1.05rem; }
+      .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; margin-top: 1rem; padding: .25rem; border: 1px solid #e0f2fe; border-radius: .85rem; background: #f0f9ff; }
+      .tabs button { min-height: 2.35rem; border: 0; border-radius: .65rem; background: transparent; color: #64748b; font: inherit; font-size: .82rem; font-weight: 700; }
+      .tabs button.active { background: #fff; color: #0369a1; box-shadow: 0 2px 8px rgb(14 116 144 / 10%); }
+      .panel { margin-top: .8rem; }
+      .event { display: grid; grid-template-columns: 4.4rem minmax(0, 1fr); gap: .8rem; align-items: center; padding: .85rem .9rem; border: 1px solid #e0f2fe; border-left: 3px solid #38bdf8; border-radius: .9rem; background: rgb(255 255 255 / 88%); box-shadow: 0 5px 16px rgb(30 64 175 / 5%); }
+      .event + .event { margin-top: .55rem; }
+      .event-time { color: #0369a1; font-size: .78rem; font-weight: 800; }
+      .event-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; font-weight: 700; }
+      .event-date { margin-top: .18rem; color: #94a3b8; font-size: .7rem; }
+      .empty { padding: 2rem 1rem; border: 1px dashed #bae6fd; border-radius: 1rem; background: rgb(255 255 255 / 72%); color: #64748b; text-align: center; font-size: .85rem; line-height: 1.7; }
+      .timeline { position: relative; padding: .25rem 0; }
+      .hour { position: relative; min-height: 3.4rem; padding-left: 3.4rem; border-top: 1px solid #e0f2fe; }
+      .hour:first-child { border-top: 0; }
+      .hour-label { position: absolute; top: -.45rem; left: 0; color: #94a3b8; font-size: .68rem; }
+      .timeline-event { display: inline-flex; max-width: calc(100% - .5rem); margin: .35rem 0 .35rem .25rem; padding: .45rem .6rem; border: 1px solid #bae6fd; border-left: 3px solid #0ea5e9; border-radius: .55rem; background: #f0f9ff; color: #075985; font-size: .72rem; font-weight: 700; }
+      .notes { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0f2fe; }
+      .notes h2 { margin: 0 0 .55rem; color: #334155; font-size: .82rem; }
+      .note { padding: .55rem .7rem; border-radius: .65rem; background: #fff7ed; color: #7c2d12; font-size: .78rem; }
+      .note + .note { margin-top: .4rem; }
+      .note.done { color: #94a3b8; text-decoration: line-through; }
+      .actions { display: flex; gap: .6rem; margin-top: 1rem; }
+      a, button.retry { display: inline-flex; flex: 1; min-height: 2.65rem; align-items: center; justify-content: center; border: 1px solid #bae6fd; border-radius: .75rem; background: #fff; color: #0369a1; font: inherit; font-size: .8rem; font-weight: 700; text-decoration: none; }
+      a.primary, button.retry { border-color: #0284c7; background: #0284c7; color: #fff; }
+      footer { margin-top: 1.15rem; color: #94a3b8; text-align: center; font-size: .7rem; }
+      @media (min-width: 640px) { main { padding-left: 1.5rem; padding-right: 1.5rem; } }
     </style>
   </head>
   <body>
     <main>
-      <h1>当前处于离线状态</h1>
-      <p>已经打开的日历页面仍可查看本地缓存日程。联网后重新打开即可同步最新数据。</p>
-      <a href="/">重新连接</a>
+      <header>
+        <div class="brand">AI Calendar</div>
+        <div class="status">离线模式</div>
+      </header>
+
+      <section class="hero">
+        <h1>最近的日历仍在手边</h1>
+        <p>当前处于离线状态，下面显示的是本机最近一次同步的日程和笔记。联网后会自动更新。</p>
+        <div class="summary"><span id="date-label">正在读取本地日程…</span><strong id="event-count">—</strong></div>
+        <div class="tabs" role="tablist" aria-label="离线显示方式">
+          <button class="active" type="button" data-view="list" role="tab" aria-selected="true">事项</button>
+          <button type="button" data-view="timeline" role="tab" aria-selected="false">时间线</button>
+        </div>
+        <div id="panel" class="panel" aria-live="polite"></div>
+        <div id="notes" class="notes" hidden></div>
+        <div class="actions">
+          <button class="retry" type="button" id="retry">重新尝试连接</button>
+          <a href="/">返回在线日历</a>
+        </div>
+      </section>
+      <footer>离线数据只保存在这台设备，不会上传到公共缓存。</footer>
     </main>
+
+    <script>
+      (() => {
+        const prefix = "aical:cache:";
+        const activeUser = localStorage.getItem("aical:active-user");
+        const panel = document.getElementById("panel");
+        const notesPanel = document.getElementById("notes");
+        const count = document.getElementById("event-count");
+        const dateLabel = document.getElementById("date-label");
+        let currentView = "list";
+        const pad = (value) => String(value).padStart(2, "0");
+        const today = (() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })();
+        const safe = (value) => String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char]));
+        const read = (key) => { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; } };
+        const allEvents = [];
+        if (activeUser) {
+          const eventPrefix = prefix + activeUser + ":/api/events";
+          for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith(eventPrefix)) continue;
+            const data = read(key);
+            if (!Array.isArray(data?.events)) continue;
+            data.events.forEach((event) => {
+              const identity = `${event.id ?? ""}:${event.date ?? ""}:${event.startTime ?? ""}:${event.title ?? ""}`;
+              if (!allEvents.some((item) => item.identity === identity)) allEvents.push({ ...event, identity });
+            });
+          }
+        }
+        allEvents.sort((a, b) => `${a.date} ${a.startTime ?? "99:99"}`.localeCompare(`${b.date} ${b.startTime ?? "99:99"}`));
+        const todayEvents = allEvents.filter((event) => event.date === today);
+        const visibleEvents = todayEvents.length > 0 ? todayEvents : allEvents.filter((event) => event.date >= today).slice(0, 12);
+        const activeDate = visibleEvents[0]?.date ?? today;
+        dateLabel.textContent = activeDate === today ? `今天 · ${activeDate}` : `最近缓存 · ${activeDate}`;
+        count.textContent = `${visibleEvents.length} 项`;
+
+        function renderList() {
+          if (!activeUser) { panel.innerHTML = '<div class="empty">请先联网登录一次，应用才能建立账号隔离的离线缓存。</div>'; return; }
+          if (visibleEvents.length === 0) { panel.innerHTML = '<div class="empty">暂无可显示的本地日程<br>联网后会自动获取最新安排。</div>'; return; }
+          panel.innerHTML = visibleEvents.map((event) => `<div class="event"><div class="event-time">${safe(event.startTime ?? "全天")}${event.endTime ? `<br><small>至 ${safe(event.endTime)}</small>` : ""}</div><div><div class="event-title">${safe(event.title)}</div><div class="event-date">${safe(event.date)}${event.repeat ? " · 重复日程" : ""}</div></div></div>`).join("");
+        }
+
+        function renderTimeline() {
+          if (visibleEvents.length === 0) { panel.innerHTML = '<div class="empty">暂无可显示的本地时间线<br>联网后会自动获取最新安排。</div>'; return; }
+          const timed = visibleEvents.filter((event) => event.startTime);
+          if (timed.length === 0) { panel.innerHTML = '<div class="empty">这一天没有定时日程<br>可切回“事项”查看全天待办。</div>'; return; }
+          const byHour = new Map();
+          timed.forEach((event) => { const hour = Number(event.startTime.slice(0, 2)); if (!byHour.has(hour)) byHour.set(hour, []); byHour.get(hour).push(event); });
+          const hours = [...byHour.keys()].sort((a, b) => a - b);
+          panel.innerHTML = `<div class="timeline">${hours.map((hour) => `<div class="hour"><span class="hour-label">${pad(hour)}:00</span>${byHour.get(hour).map((event) => `<span class="timeline-event">${safe(event.startTime)}${event.endTime ? `–${safe(event.endTime)}` : ""} ${safe(event.title)}</span>`).join("")}</div>`).join("")}</div>`;
+        }
+
+        function render() { if (currentView === "timeline") renderTimeline(); else renderList(); }
+        document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => { currentView = button.dataset.view; document.querySelectorAll("[data-view]").forEach((item) => { const active = item === button; item.classList.toggle("active", active); item.setAttribute("aria-selected", String(active)); }); render(); }));
+        const noteData = activeUser ? read(prefix + activeUser + ":/api/notes") : null;
+        if (Array.isArray(noteData?.notes) && noteData.notes.length > 0) { notesPanel.hidden = false; notesPanel.innerHTML = `<h2>笔记本</h2>${noteData.notes.slice(0, 8).map((note) => `<div class="note${note.done ? " done" : ""}">${safe(note.text)}</div>`).join("")}`; }
+        document.getElementById("retry").addEventListener("click", () => window.location.reload());
+        window.addEventListener("online", () => { window.location.href = "/"; });
+        render();
+      })();
+    </script>
   </body>
 </html>

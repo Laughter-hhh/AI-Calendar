@@ -61,6 +61,7 @@ jobs:
             sleep 1
           done
           cd ..
+          node scripts/generate-test-data.mjs
           node scripts/parser-cases.mjs
           node scripts/timeline-layout-test.mjs
           node scripts/offline-test.mjs

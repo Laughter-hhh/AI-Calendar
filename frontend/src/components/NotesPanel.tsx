@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParseResult } from "../../../backend/ai/types";
+import { cacheSet, setOfflineUserId } from "@/lib/offline";
 
 interface Note {
   id: number;
@@ -35,7 +36,7 @@ function repeatLabel(r?: string | null): string {
   return "";
 }
 
-export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
+export default function NotesPanel({ initialNotes, userId }: { initialNotes: Note[]; userId: number }) {
   const router = useRouter();
   const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [input, setInput] = useState("");
@@ -45,6 +46,12 @@ export default function NotesPanel({ initialNotes }: { initialNotes: Note[] }) {
   const [error, setError] = useState("");
   const [convert, setConvert] = useState<ConvertState | null>(null);
   const [returning, setReturning] = useState(false);
+
+  // 记录最近一次笔记列表，供离线应用壳展示；账号指针与日程缓存保持一致。
+  useEffect(() => {
+    setOfflineUserId(userId);
+    cacheSet("/api/notes", { notes });
+  }, [notes, userId]);
 
   async function addNote() {
     const text = input.trim();

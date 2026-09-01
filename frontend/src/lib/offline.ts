@@ -2,6 +2,7 @@
 // Service Worker 负责静态应用壳和离线回退页；用户专属 API 不进入共享 Cache Storage。
 const PREFIX = "aical:cache:";
 const MUTATION_KEY = "__pending_mutations";
+const ACTIVE_USER_KEY = "aical:active-user";
 const USER_REQUEST_TIMEOUT_MS = 4000;
 const API_REQUEST_TIMEOUT_MS = 8000;
 
@@ -15,6 +16,38 @@ export interface OfflineMutation {
 
 let cachedUserId: number | null = null;
 let userIdPromise: Promise<number | null> | null = null;
+
+function readPersistedUserId(): number | null {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const value = Number(localStorage.getItem(ACTIVE_USER_KEY));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 将当前登录账号记入本机，供完全离线重新打开应用时定位隔离缓存。 */
+export function setOfflineUserId(userId: number): void {
+  if (!Number.isInteger(userId) || userId <= 0) return;
+  cachedUserId = userId;
+  try {
+    localStorage.setItem(ACTIVE_USER_KEY, String(userId));
+  } catch {
+    // 存储不可用时仍保留本次页面生命周期内的账号缓存。
+  }
+}
+
+/** 登出时清除离线账号指针，避免下一位用户看到上一位用户的本地缓存。 */
+export function clearOfflineUserId(): void {
+  cachedUserId = null;
+  userIdPromise = null;
+  try {
+    localStorage.removeItem(ACTIVE_USER_KEY);
+  } catch {
+    // 忽略不可用的本地存储。
+  }
+}
 
 async function fetchWithTimeout(
   input: RequestInfo | URL,
@@ -31,8 +64,9 @@ async function fetchWithTimeout(
 }
 
 async function getUserId(): Promise<number | null> {
+  if (cachedUserId === null) cachedUserId = readPersistedUserId();
   if (cachedUserId !== null) return cachedUserId;
-  // 断网时不要为了识别账号发起网络请求；已有会话直接沿用内存中的账号缓存。
+  // 断网时不要为了识别账号发起网络请求；已有会话直接沿用持久化账号缓存。
   if (!isOnline()) return null;
   if (!userIdPromise) {
     userIdPromise = (async () => {
@@ -40,7 +74,8 @@ async function getUserId(): Promise<number | null> {
         const res = await fetchWithTimeout("/api/auth/me", { cache: "no-store" }, USER_REQUEST_TIMEOUT_MS);
         if (res.ok) {
           const data = (await res.json()) as { user?: { id?: number } | null };
-          cachedUserId = data.user?.id ?? null;
+          if (data.user?.id) setOfflineUserId(data.user.id);
+          else cachedUserId = null;
         }
       } catch {
         cachedUserId = null;
@@ -55,6 +90,7 @@ async function getUserId(): Promise<number | null> {
 }
 
 function storageKey(readKey: string): string {
+  if (cachedUserId === null) cachedUserId = readPersistedUserId();
   return PREFIX + (cachedUserId ?? "anon") + ":" + readKey;
 }
 
@@ -144,7 +180,8 @@ export async function fetchCachedJson<T>(
 ): Promise<{ data: T | null; fromCache: boolean }> {
   if (!isOnline()) {
     const cached = cacheGet(url) as T | null;
-    if (cached !== null) return { data: cached, fromCache: true };
+    // 离线且没有对应视图缓存时立即返回，不要再等待一次网络超时。
+    return cached !== null ? { data: cached, fromCache: true } : { data: null, fromCache: false };
   }
 
   await getUserId();

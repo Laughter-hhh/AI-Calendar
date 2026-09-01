@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { CalendarEvent } from "@/lib/events";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
-import { fetchCachedJson, isOnline } from "@/lib/offline";
+import { cacheSet, fetchCachedJson, isOnline, setOfflineUserId } from "@/lib/offline";
 import DateNav from "./DateNav";
 import SearchBar from "./SearchBar";
 import EventList from "./EventList";
@@ -45,18 +45,26 @@ function buildUrl(date: string, view: View, query: string): string {
   return s ? `/?${s}` : "/";
 }
 
+function buildDataUrl(date: string, view: View): string {
+  if (view === "week") return `/api/events?from=${date}&to=${shiftDate(date, 6)}`;
+  if (view === "month") return `/api/events?from=${shiftMonth(date, 0)}&to=${shiftDate(shiftMonth(date, 1), -1)}`;
+  return `/api/events?date=${date}`;
+}
+
 export default function ScheduleArea({
   initialDate,
   initialView,
   initialQuery,
   initialEvents,
   initialCurrentTime,
+  userId,
 }: {
   initialDate: string;
   initialView: View;
   initialQuery: string;
   initialEvents: CalendarEvent[];
   initialCurrentTime: string;
+  userId: number;
 }) {
   const [date, setDate] = useState(initialDate);
   const [view, setView] = useState<View>(initialView);
@@ -70,20 +78,19 @@ export default function ScheduleArea({
   const [searchOpen, setSearchOpen] = useState(initialQuery !== "");
   const [dayMode, setDayMode] = useState<"list" | "timeline">("list");
 
+  // 首屏服务端数据也写入账号隔离缓存，让手机完全离线重新打开时仍能看到最近日程。
+  useEffect(() => {
+    setOfflineUserId(userId);
+    cacheSet(buildDataUrl(date, view), { events });
+  }, [date, events, userId, view]);
+
   const load = useCallback(async (d: string, v: View) => {
     setLoading(true);
     try {
-      let url = "";
-      if (v === "week") {
-        url = `/api/events?from=${d}&to=${shiftDate(d, 6)}`;
-      } else if (v === "month") {
-        url = `/api/events?from=${shiftMonth(d, 0)}&to=${shiftDate(shiftMonth(d, 1), -1)}`;
-      } else {
-        url = `/api/events?date=${d}`;
-      }
+      const url = buildDataUrl(d, v);
       const res = await fetchCachedJson<{ events: CalendarEvent[] }>(url);
       if (res.data?.events) setEvents(res.data.events);
-      setUsingCachedData(res.fromCache && !isOnline());
+      setUsingCachedData(res.fromCache || !isOnline());
     } catch {
       // 网络异常保留旧数据
     } finally {

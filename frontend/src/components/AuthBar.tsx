@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { clearOfflineUserId } from "@/lib/offline";
 
 export default function AuthBar({ email }: { email: string }) {
   const router = useRouter();
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
+    clearOfflineUserId();
     router.refresh();
   }
 

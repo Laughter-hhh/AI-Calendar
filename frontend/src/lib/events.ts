@@ -255,8 +255,8 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
   const color = data.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
   const info = getDb()
     .prepare(
-      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid, series_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid, updated_at, series_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`
     )
     .run(
       userId,
@@ -310,8 +310,8 @@ export function importEvents(userId: number, events: ImportedEvent[]): { importe
   const known = existingExternalUids(userId, events.map((event) => event.externalUid));
   const insert = db.prepare(
     `INSERT OR IGNORE INTO events
-      (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
   );
   let imported = 0;
   let duplicates = 0;

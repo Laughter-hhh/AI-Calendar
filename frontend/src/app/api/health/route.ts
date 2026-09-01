@@ -16,5 +16,5 @@ export async function GET() {
     db,
     storage: "sqlite",
     sync: { metadata: true, cloud: false },
-  });
+  }, { status: db === "ok" ? 200 : 503 });
 }

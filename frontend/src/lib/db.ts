@@ -87,7 +87,10 @@ function ensureEventsColumns(db: DatabaseSync): void {
     db.exec("ALTER TABLE events ADD COLUMN external_uid TEXT");
   }
   if (!cols.some((c) => c.name === "updated_at")) {
-    db.exec("ALTER TABLE events ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))");
+    // SQLite 不允许在 ALTER TABLE 中使用 datetime('now') 这类非字面量默认值。
+    // 先添加可空列，再回填已有记录；新写入由 INSERT 显式设置时间。
+    db.exec("ALTER TABLE events ADD COLUMN updated_at TEXT");
+    db.exec("UPDATE events SET updated_at = datetime('now') WHERE updated_at IS NULL");
   }
   if (!cols.some((c) => c.name === "series_id")) {
     db.exec("ALTER TABLE events ADD COLUMN series_id INTEGER REFERENCES events(id) ON DELETE CASCADE");
@@ -101,19 +104,29 @@ export function getDb(): DatabaseSync {
   const dbPath = resolveDbPath(base);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  db = new DatabaseSync(dbPath);
-
-  // 优先读取 database/schema.sql（单一事实来源），读不到时用内置兜底
-  let schema: string;
+  const connection = new DatabaseSync(dbPath);
   try {
-    schema = fs.readFileSync(path.join(base, "database", "schema.sql"), "utf8");
-  } catch {
-    schema = EMBEDDED_SCHEMA;
+    // 优先读取 database/schema.sql（单一事实来源），读不到时用内置兜底
+    let schema: string;
+    try {
+      schema = fs.readFileSync(path.join(base, "database", "schema.sql"), "utf8");
+    } catch {
+      schema = EMBEDDED_SCHEMA;
+    }
+    connection.exec(schema);
+    ensureEventsColumns(connection);
+    connection.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_user_external_uid ON events(user_id, external_uid)");
+    connection.exec("PRAGMA journal_mode = WAL;");
+    connection.exec("PRAGMA foreign_keys = ON;");
+    db = connection;
+    return connection;
+  } catch (error) {
+    // 迁移失败时不要缓存半初始化连接，否则后续请求会继续使用残缺 schema。
+    try {
+      connection.close();
+    } catch {
+      // 忽略关闭连接时的次生错误，保留原始迁移错误。
+    }
+    throw error;
   }
-  db.exec(schema);
-  ensureEventsColumns(db);
-  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_user_external_uid ON events(user_id, external_uid)");
-  db.exec("PRAGMA journal_mode = WAL;");
-  db.exec("PRAGMA foreign_keys = ON;");
-  return db;
 }

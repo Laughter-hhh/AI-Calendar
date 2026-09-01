@@ -87,6 +87,37 @@ async function main() {
     JSON.stringify(ev2)
   );
 
+  console.log("\n4b) 本周多日期解析并保存");
+  const finiteText = "本周三和周四晚上九点新生扫楼宣传";
+  const finiteParse = await api("/api/ai/parse", { method: "POST", body: { text: finiteText } });
+  const finiteEvents = finiteParse.data?.result?.events ?? [];
+  check(
+    "本周三和周四解析为两条一次性日程",
+    finiteParse.status === 200 &&
+      finiteEvents.length === 2 &&
+      finiteEvents.every((event) => event.time === "21:00" && event.repeat == null),
+    JSON.stringify(finiteParse.data?.result)
+  );
+  const finiteIds = [];
+  for (const event of finiteEvents) {
+    const createdFinite = await api("/api/events", {
+      method: "POST",
+      body: { ...event, sourceText: finiteText },
+    });
+    if (createdFinite.data?.event?.id !== undefined) finiteIds.push(createdFinite.data.event.id);
+  }
+  check("两条本周日程均可保存", finiteIds.length === 2, JSON.stringify(finiteIds));
+  const finiteDates = finiteEvents.map((event) => event.date).sort();
+  const finiteRange =
+    finiteDates.length === 2 ? await api(`/api/events?from=${finiteDates[0]}&to=${finiteDates[1]}`) : null;
+  check(
+    "保存后两条日程可查询且仍是一次性",
+    finiteRange?.status === 200 &&
+      finiteIds.every((id) => finiteRange.data?.events?.some((event) => event.id === id && event.repeat == null)),
+    JSON.stringify(finiteRange?.data)
+  );
+  for (const id of finiteIds) await api(`/api/events/${id}`, { method: "DELETE" });
+
   console.log("\n5) 信息缺失时追问");
   const r3 = await api("/api/ai/parse", { method: "POST", body: { text: "晚上八点学习 Python" } });
   check("返回 missing 包含 date", r3.status === 200 && r3.data?.result?.missing.includes("date"), JSON.stringify(r3.data?.result));

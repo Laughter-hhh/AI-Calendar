@@ -24,6 +24,12 @@ function currentWeekdayDate(target) {
   return shift(monday, target === 0 ? 6 : target - 1);
 }
 
+function weekdayAfter(dateStr, target) {
+  const weekday = new Date(`${dateStr}T00:00:00Z`).getUTCDay();
+  const diff = (target - weekday + 7) % 7 || 7;
+  return shift(dateStr, diff);
+}
+
 let cookie = "";
 async function parse(text) {
   const res = await fetch(`${BASE_URL}/api/ai/parse`, {
@@ -84,6 +90,24 @@ async function main() {
   check(
     "本周周三和周四 → 兼容重复星期词",
     r.result.events?.length === 2 && r.result.events.every((e) => e.time === "21:00" && e.repeat === null),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("九月十号十五点到十八点助教开会，之后每周四和周五十五点到十八点当助教");
+  const sep10 = `${new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear()}-09-10`;
+  const compositeEvents = r.result.events ?? [];
+  const oneOffMeeting = compositeEvents.some(
+    (e) => e.title === "助教开会" && e.date === sep10 && e.time === "15:00" && e.endTime === "18:00" && e.repeat === null
+  );
+  const weeklyAssistant = compositeEvents.filter((e) => e.title === "当助教");
+  check(
+    "一次性会议 + 每周四/周五 → 3条独立日程",
+    compositeEvents.length === 3 &&
+      oneOffMeeting &&
+      weeklyAssistant.length === 2 &&
+      weeklyAssistant.every(
+        (e) => e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly" && e.date > sep10 && [weekdayAfter(sep10, 4), weekdayAfter(sep10, 5)].includes(e.date)
+      ),
     JSON.stringify(r.result)
   );
 

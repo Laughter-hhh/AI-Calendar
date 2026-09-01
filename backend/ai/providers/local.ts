@@ -99,6 +99,48 @@ export function resolveCurrentWeekdayList(text: string): { dates: string[]; rest
   };
 }
 
+/** 解析“每周四和周五 / 每周四周五”这类多个星期的重复规则。 */
+export function resolveWeeklyWeekdayList(text: string, afterDate?: string): { dates: string[]; rest: string } | null {
+  const first = text.match(/每(?:周|星期|礼拜)\s*([日天一二三四五六])/);
+  if (!first) return null;
+
+  const weekdays = [first[1]];
+  let cursor = first[0].length;
+  while (cursor < text.length) {
+    const tail = text.slice(cursor);
+    const connector = tail.match(/^\s*(?:(?:和|、|及|以及|,|，)\s*)?/);
+    const connectorText = connector?.[0] ?? "";
+    const afterConnector = tail.slice(connectorText.length);
+    const token = afterConnector.match(/^(?:(?:每|本|这)?(?:周|星期|礼拜)\s*)?([日天一二三四五六])/);
+    if (!token) break;
+    const hasConnector = /(?:和|、|及|以及|,|，)/.test(connectorText);
+    const hasWeekPrefix = /^(?:每|本|这)?(?:周|星期|礼拜)\s*/.test(afterConnector);
+    // 没有连接词时，必须有第二个“周/星期/礼拜”前缀，避免把标题中的普通“六”等字误当星期。
+    if (!hasConnector && !hasWeekPrefix) break;
+    weekdays.push(token[1]);
+    cursor += connectorText.length + token[0].length;
+  }
+  if (weekdays.length < 2) return null;
+
+  return {
+    dates: [...new Set(weekdays.map((day) => nextWeekdayDate(WEEKDAY_NAME[day], afterDate, afterDate !== undefined)))],
+    rest: text.slice(cursor).replace(/\s+/g, " ").trim(),
+  };
+}
+
+function splitCompositeSchedule(text: string): { first: string; recurring: string } | null {
+  const match = text.match(
+    /^(.+?)(?:[，,；;]\s*)?(?:之后|然后|接着|随后)\s*(每(?:周|星期|礼拜).+)$/
+  );
+  if (!match) return null;
+  return { first: match[1].trim(), recurring: match[2].trim() };
+}
+
+/** 判断是否应绕过模型标准化，保留一次性 + 重复两段的原始语义。 */
+export function isCompositeScheduleSentence(text: string): boolean {
+  return splitCompositeSchedule(text.trim()) !== null;
+}
+
 /** 解析时间表达，返回 { time, endTime, 去掉时间词后的剩余文本 } */
 export function resolveTime(text: string): { time: string | null; endTime: string | null; rest: string } {
   let rest = text;
@@ -183,6 +225,26 @@ export const localParser: AIParser = {
 
   parse(text: string, context?: ParseContext): Promise<ParseResult> {
     const input = text.trim();
+    const composite = splitCompositeSchedule(input);
+    if (composite) {
+      return localParser.parse(composite.first, context).then((first) => {
+        const anchorDate = first.events.map((event) => event.date).sort().at(-1);
+        return localParser
+          .parse(composite.recurring, anchorDate ? { afterDate: anchorDate } : undefined)
+          .then((recurring) => {
+            const missing = [...new Set([...first.missing, ...recurring.missing])];
+            const events = [...first.events, ...recurring.events];
+            return {
+              events,
+              missing,
+              message:
+                missing.length > 0
+                  ? `${first.message}${recurring.message ? `；${recurring.message}` : ""}`
+                  : `已识别 1 条一次性日程和 ${recurring.events.length} 条每周重复日程，确认后保存。`,
+            };
+          });
+      });
+    }
     let rest = input;
 
     // 1. 连续 N 天（例：从今天开始连续四天晚上八点学习 Python）
@@ -200,6 +262,7 @@ export const localParser: AIParser = {
     let repeat: string | null = null;
     let repeatUntil: string | null = null;
     let repeatStart: string | null = null; // 具体规则的起始日（如"每周一"的下一个周一）
+    let repeatStarts: string[] | null = null; // 多个星期几时拆成多个 weekly 事件
 
     const untilMatch = rest.match(/持续(?:到)?(\d{1,2})月(\d{1,2})[日号]?/);
     if (untilMatch) {
@@ -212,11 +275,16 @@ export const localParser: AIParser = {
       repeat = "daily";
       rest = rest.replace(/每天|每日|每晚/g, " ");
     } else {
+      const weeklyList = resolveWeeklyWeekdayList(rest, context?.afterDate);
       const weeklySpec = rest.match(/每(?:周|星期|礼拜)([日天一二三四五六])/);
       const monthlySpec = rest.match(/每月(\d{1,2})[日号]/);
-      if (weeklySpec) {
+      if (weeklyList) {
         repeat = "weekly";
-        repeatStart = nextWeekdayDate(WEEKDAY_NAME[weeklySpec[1]]);
+        repeatStarts = weeklyList.dates;
+        rest = weeklyList.rest;
+      } else if (weeklySpec) {
+        repeat = "weekly";
+        repeatStart = nextWeekdayDate(WEEKDAY_NAME[weeklySpec[1]], context?.afterDate, context?.afterDate !== undefined);
         rest = rest.replace(weeklySpec[0], " ");
       } else if (monthlySpec) {
         repeat = "monthly";
@@ -253,7 +321,7 @@ export const localParser: AIParser = {
 
     // 3. 日期（重复规则可自带起始日，如"每周一"）
     const resolvedDate = currentWeekdays ? null : resolveDate(rest);
-    const date = context?.date ?? resolvedDate?.date ?? currentWeekdays?.dates[0] ?? repeatStart ?? null;
+    const date = context?.date ?? resolvedDate?.date ?? currentWeekdays?.dates[0] ?? repeatStarts?.[0] ?? repeatStart ?? null;
     if (resolvedDate) rest = resolvedDate.rest;
 
     // 4. 时间
@@ -308,15 +376,16 @@ export const localParser: AIParser = {
         });
       }
     } else if (title && startDate) {
-      const eventDates = currentWeekdays?.dates ?? null;
+      const finiteDates = currentWeekdays?.dates ?? null;
+      const eventDates = finiteDates ?? repeatStarts ?? null;
       for (let i = 0; i < (eventDates?.length ?? (repeatDays > 0 ? repeatDays : 1)); i++) {
         events.push({
           title,
           date: eventDates?.[i] ?? (repeatDays > 0 ? addDaysStr(startDate, i) : startDate),
           time,
           endTime: resolvedTime.endTime,
-          repeat: repeatDays > 0 || eventDates ? null : repeat,
-          repeatUntil: repeatDays > 0 || eventDates ? null : repeatUntil,
+          repeat: repeatDays > 0 || finiteDates ? null : repeat,
+          repeatUntil: repeatDays > 0 || finiteDates ? null : repeatUntil,
           note: undefined,
         });
       }
@@ -338,7 +407,7 @@ export const localParser: AIParser = {
       message = `已为你安排从 ${startDate} 起连续 ${repeatDays} 天的日程。`;
     } else if (repeat) {
       const repeatNames: Record<string, string> = { daily: "每天", weekly: "每周", monthly: "每月" };
-      message = `已为你安排${repeatNames[repeat] ?? repeat}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
+      message = `已为你安排${repeatNames[repeat] ?? repeat}${repeatStarts && repeatStarts.length > 1 ? ` ${repeatStarts.length} 天` : ""}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
     } else if (deadlineDate) {
       message = `已为「${title}」生成截止提醒：提前 7 天、3 天、1 天、当天（截止 ${deadlineDate}）。`;
     } else if (!time) {
@@ -357,9 +426,9 @@ export const localParser: AIParser = {
 };
 
 /** 下一个指定星期几（今天匹配则从今天开始） */
-function nextWeekdayDate(target: number): string {
-  const diff = (target - weekdayOf(todayStr()) + 7) % 7;
-  return addDaysStr(todayStr(), diff);
+function nextWeekdayDate(target: number, fromDate = todayStr(), strictlyAfter = false): string {
+  const diff = (target - weekdayOf(fromDate) + 7) % 7;
+  return addDaysStr(fromDate, strictlyAfter && diff === 0 ? 7 : diff);
 }
 
 /** 下一个指定日期号（今天匹配则从今天开始；月末兜底） */

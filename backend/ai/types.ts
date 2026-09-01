@@ -34,6 +34,8 @@ export interface ParseContext {
   title?: string;
   date?: string;
   time?: string;
+  /** 复合句中“之后每周…”的起算锚点，仅由本地解析器内部传递。 */
+  afterDate?: string;
 }
 
 /** 所有解析器实现统一接口（模型可替换的关键） */

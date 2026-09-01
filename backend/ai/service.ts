@@ -2,7 +2,7 @@
 // 1) 配置 Key 时：模型理解自然语言 → 改写成标准句式 → 本地固定程序生成日程
 // 2) 未配置 Key 或模型失败时：直接用本地规则解析器
 import { localParser } from "./providers/local";
-import { isDeadlineSentence } from "./providers/local";
+import { isCompositeScheduleSentence, isDeadlineSentence } from "./providers/local";
 import { OpenAICompatibleParser } from "./providers/openai";
 import type { ParseContext, ParseResult } from "./types";
 import { getConfig } from "./config";
@@ -37,7 +37,7 @@ export async function parseEvent(
             )
           : canonical;
         const result = await localParser.parse(
-          isFiniteCurrentWeekSentence(text) ? text : safeCanonical,
+          isFiniteCurrentWeekSentence(text) || isCompositeScheduleSentence(text) ? text : safeCanonical,
           context
         );
         // 只要标准化结果可用（有事件或需要追问），就使用它

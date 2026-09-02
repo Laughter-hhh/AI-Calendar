@@ -139,6 +139,8 @@ export default function AiInput() {
       } else if (conflictTitles.length > 0) {
         setInfo(`已添加，但与以下日程时间重叠：${conflictTitles.join("、")}`);
       }
+      // ScheduleArea 持有客户端日程状态；保存完成后主动通知当前视图重新读取，避免必须手动刷新页面。
+      window.dispatchEvent(new CustomEvent("aical:events-changed"));
       router.refresh();
     } catch (error) {
       setError(error instanceof Error ? error.message : "保存失败，请重试");
@@ -166,6 +168,7 @@ export default function AiInput() {
           body: JSON.stringify(actionResult.changes),
         });
       }
+      window.dispatchEvent(new CustomEvent("aical:events-changed"));
       reset();
       router.refresh();
     } finally {

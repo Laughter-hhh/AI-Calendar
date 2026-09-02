@@ -44,6 +44,7 @@ async function main() {
   const notesSource = await readFile(new URL("../frontend/src/components/NotesPanel.tsx", import.meta.url), "utf8");
   const notesLoadingSource = await readFile(new URL("../frontend/src/app/notes/loading.tsx", import.meta.url), "utf8");
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
+  const aiInputSource = await readFile(new URL("../frontend/src/components/AiInput.tsx", import.meta.url), "utf8");
   const eventListSource = await readFile(new URL("../frontend/src/components/EventList.tsx", import.meta.url), "utf8");
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
@@ -66,6 +67,12 @@ async function main() {
     scheduleSource.includes('href="/settings" className={menuItem} onClick={() => setMenuOpen(false)}') &&
       scheduleSource.includes('href="/shares" className={menuItem} onClick={() => setMenuOpen(false)}') &&
       scheduleSource.includes('href="/download" className={menuItem} onClick={() => setMenuOpen(false)}')
+  );
+  check(
+    "保存或修改日程后当前视图立即刷新",
+    scheduleSource.includes('aical:events-changed') &&
+      aiInputSource.includes('new CustomEvent("aical:events-changed")') &&
+      aiInputSource.includes("保存完成后主动通知当前视图重新读取")
   );
   check(
     "移动端左滑返回上一级并避开横向控件",

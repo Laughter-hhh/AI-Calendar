@@ -132,9 +132,12 @@ export default function ScheduleArea({
     window.addEventListener("online", onOnline);
     const onOfflineSync = () => void load(date, view);
     window.addEventListener("aical:offline-sync", onOfflineSync);
+    const onEventsChanged = () => void load(date, view);
+    window.addEventListener("aical:events-changed", onEventsChanged);
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("aical:offline-sync", onOfflineSync);
+      window.removeEventListener("aical:events-changed", onEventsChanged);
     };
   }, [date, load, view]);
 

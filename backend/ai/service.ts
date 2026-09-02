@@ -22,6 +22,11 @@ function hasWeeklyDuration(text: string): boolean {
   return /持续\s*[零一二两三四五六七八九十百\d]+\s*周/.test(text);
 }
 
+/** “下周开始”是相对锚点，必须保留原句交给本地规则计算下周一。 */
+function hasRelativeWeeklyStart(text: string): boolean {
+  return /(?:从|自)?\s*下(?:周|星期|礼拜)\s*(?:开始|起)/.test(text);
+}
+
 /** 时间段是确定性字段；若模型标准化丢掉结束时间，必须回到原句校正。 */
 function hasTimeRange(text: string): boolean {
   return /(?:\d{1,2}:\d{2}\s*(?:到|至|~|－|—|-|–)\s*\d{1,2}:\d{2})|(?:[零一二两三四五六七八九十\d]{1,3})[点时][零一二两三四五六七八九十\d]{0,2}分?(?:到|至|~|－|—|-)\s*(?:[零一二两三四五六七八九十\d]{1,3})[点时]/.test(
@@ -33,6 +38,7 @@ function needsOriginalDeterministicParse(input: string, result: ParseResult): bo
   if (hasTimeRange(input) && result.events.some((event) => event.time !== null && !event.endTime)) return true;
   if (hasExplicitWeeklyRule(input) && result.events.length > 0 && result.events.every((event) => event.repeat !== "weekly")) return true;
   if (hasWeeklyDuration(input)) return true;
+  if (hasRelativeWeeklyStart(input)) return true;
   return false;
 }
 

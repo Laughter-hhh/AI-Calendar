@@ -30,6 +30,13 @@ function weekdayAfter(dateStr, target) {
   return shift(dateStr, diff);
 }
 
+function nextWeekMonday() {
+  const today = todayStr();
+  const weekday = new Date(today + "T00:00:00Z").getUTCDay();
+  const monday = shift(today, -(weekday === 0 ? 6 : weekday - 1));
+  return shift(monday, 7);
+}
+
 let cookie = "";
 async function parse(text, context) {
   const res = await fetch(`${BASE_URL}/api/ai/parse`, {
@@ -205,6 +212,20 @@ async function main() {
       durationEvents.every((e) => e.title === "助教" && e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly") &&
       durationEvents.some((e) => e.date === durationStart && e.repeatUntil === durationThursdayEnd) &&
       durationEvents.some((e) => e.date === durationFridayStart && e.repeatUntil === durationFridayEnd),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("从下周开始，每周四和周五15点到18点助教，持续16周");
+  const nextMonday = nextWeekMonday();
+  const nextThursday = shift(nextMonday, 3);
+  const nextFriday = shift(nextMonday, 4);
+  const nextWeekEvents = r.result.events ?? [];
+  check(
+    "从下周开始每周四/周五 → 两条 weekly 且标题不含起始词",
+    nextWeekEvents.length === 2 &&
+      nextWeekEvents.every((e) => e.title === "助教" && e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly") &&
+      nextWeekEvents.some((e) => e.date === nextThursday && e.repeatUntil === shift(nextThursday, 15 * 7)) &&
+      nextWeekEvents.some((e) => e.date === nextFriday && e.repeatUntil === shift(nextFriday, 15 * 7)),
     JSON.stringify(r.result)
   );
 

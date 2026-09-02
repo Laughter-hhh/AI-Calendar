@@ -121,7 +121,8 @@ export function resolveWeeklyWeekdayList(
   if (!first) return null;
 
   const weekdays = [first[1]];
-  let cursor = first[0].length;
+  // 匹配可能位于日期锚点删除后留下的标点之后，游标必须包含匹配起始位置。
+  let cursor = (first.index ?? 0) + first[0].length;
   while (cursor < text.length) {
     const tail = text.slice(cursor);
     const connector = tail.match(/^\s*(?:(?:和|、|及|以及|,|，)\s*)?/);
@@ -157,6 +158,19 @@ function resolveAnchoredStartDate(text: string): { date: string; rest: string } 
         rest: text.replace(iso[0], " ").replace(/\s+/g, " ").trim(),
       };
     }
+  }
+
+  // “从下周开始”表示下一个自然周的周一，供后面的“每周四和周五”计算首个实例。
+  // 这个锚点必须先于重复规则解析，否则“下周开始”会残留在标题中。
+  const nextWeek = text.match(/(?:从|自)?\s*下(?:周|星期|礼拜)\s*(?:开始|起)/);
+  if (nextWeek) {
+    const today = todayStr();
+    const weekday = weekdayOf(today);
+    const monday = addDaysStr(today, -(weekday === 0 ? 6 : weekday - 1));
+    return {
+      date: addDaysStr(monday, 7),
+      rest: text.replace(nextWeek[0], " ").replace(/\s+/g, " ").trim(),
+    };
   }
 
   const monthDay = text.match(

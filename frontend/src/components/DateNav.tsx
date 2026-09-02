@@ -18,7 +18,8 @@ export default function DateNav({
   }
 
   const isCurrent = view === "month" ? date.slice(0, 7) === todayStr().slice(0, 7) : date === todayStr();
-  const btn = "ui-button-secondary h-10 min-w-10 px-3 text-sm";
+  // 日期切换按钮在窄屏上不得被压缩换行，日期输入框会优先收缩。
+  const btn = "ui-button-secondary h-10 min-w-10 shrink-0 whitespace-nowrap px-3 text-sm";
   const seg = (active: boolean) => (active ? "ui-segment-active flex-1 sm:flex-none" : "ui-segment-item flex-1 sm:flex-none");
 
   return (

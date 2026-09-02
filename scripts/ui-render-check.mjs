@@ -44,6 +44,7 @@ async function main() {
   const notesSource = await readFile(new URL("../frontend/src/components/NotesPanel.tsx", import.meta.url), "utf8");
   const notesLoadingSource = await readFile(new URL("../frontend/src/app/notes/loading.tsx", import.meta.url), "utf8");
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
+  const dateNavSource = await readFile(new URL("../frontend/src/components/DateNav.tsx", import.meta.url), "utf8");
   const aiInputSource = await readFile(new URL("../frontend/src/components/AiInput.tsx", import.meta.url), "utf8");
   const eventListSource = await readFile(new URL("../frontend/src/components/EventList.tsx", import.meta.url), "utf8");
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
@@ -81,6 +82,10 @@ async function main() {
       swipeSource.includes("isHorizontalScroller") &&
       swipeSource.includes("a, input") &&
       swipeSource.includes("router.back()")
+  );
+  check(
+    "手机版“今天”按钮保持单行",
+    dateNavSource.includes("shrink-0 whitespace-nowrap") && dateNavSource.includes("title=\"回到今天\"")
   );
 
   const email = `ui-${Date.now()}@test.local`;

@@ -43,6 +43,18 @@ function cnToNumber(s: string): number | null {
 export function resolveDate(text: string): { date: string; rest: string } | null {
   let rest = text;
 
+  // AI 标准句式日期：YYYY-MM-DD
+  const isoDate = rest.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoDate) {
+    const year = Number(isoDate[1]);
+    const month = Number(isoDate[2]);
+    const day = Number(isoDate[3]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      rest = rest.replace(isoDate[0], " ");
+      return { date: `${year}-${pad2(month)}-${pad2(day)}`, rest: rest.replace(/\s+/g, " ").trim() };
+    }
+  }
+
   // 同时吞掉 "从…开始" 这类前缀：从今天开始 → 今天
   const relative = rest.match(/(?:从)?(?:今天|今日|明天|明日|后天)(?:开始)?/);
   if (relative) {
@@ -101,7 +113,7 @@ export function resolveCurrentWeekdayList(text: string): { dates: string[]; rest
 
 /** 解析“每周四和周五 / 每周四周五”这类多个星期的重复规则。 */
 export function resolveWeeklyWeekdayList(text: string, afterDate?: string): { dates: string[]; rest: string } | null {
-  const first = text.match(/每(?:周|星期|礼拜)\s*([日天一二三四五六])/);
+  const first = text.match(/每(?:周|星期|礼拜)\s*(?:(?:周|星期|礼拜)\s*)?([日天一二三四五六])/);
   if (!first) return null;
 
   const weekdays = [first[1]];
@@ -147,10 +159,26 @@ export function resolveTime(text: string): { time: string | null; endTime: strin
   let time: string | null = null;
   let endTime: string | null = null;
 
+  // AI 标准句式时间段：HH:mm-HH:mm（不再依赖中文“点/到”写法）
+  const clockRange = rest.match(/(\d{1,2}):(\d{2})\s*(?:到|至|~|－|—|-|–)\s*(\d{1,2}):(\d{2})/);
+  if (clockRange) {
+    const h1 = Number(clockRange[1]);
+    const m1 = Number(clockRange[2]);
+    const h2 = Number(clockRange[3]);
+    const m2 = Number(clockRange[4]);
+    if (h1 <= 23 && h2 <= 23 && m1 <= 59 && m2 <= 59) {
+      time = `${pad2(h1)}:${pad2(m1)}`;
+      endTime = `${pad2(h2)}:${pad2(m2)}`;
+      rest = rest.replace(clockRange[0], " ");
+    }
+  }
+
   // 时间段：3点到5点 / 14:00-16:00 / 两点至四点
-  const range = rest.match(
-    /([零一二两三四五六七八九十\d]{1,3})[点时]([零一二三四五六七八九十\d]{1,2})?分?(?:到|至|~|－|—|-)(\d{1,2}|[零一二三四五六七八九十]{1,3})[点时]([零一二三四五六七八九十\d]{1,2})?分?/
-  );
+  const range = time
+    ? null
+    : rest.match(
+        /([零一二两三四五六七八九十\d]{1,3})[点时]([零一二三四五六七八九十\d]{1,2})?分?(?:到|至|~|－|—|-)(\d{1,2}|[零一二三四五六七八九十]{1,3})[点时]([零一二三四五六七八九十\d]{1,2})?分?/
+      );
   if (range) {
     const h1 = cnToNumber(range[1]);
     const m1 = range[2] ? cnToNumber(range[2]) : 0;
@@ -276,7 +304,7 @@ export const localParser: AIParser = {
       rest = rest.replace(/每天|每日|每晚/g, " ");
     } else {
       const weeklyList = resolveWeeklyWeekdayList(rest, context?.afterDate);
-      const weeklySpec = rest.match(/每(?:周|星期|礼拜)([日天一二三四五六])/);
+      const weeklySpec = rest.match(/每(?:周|星期|礼拜)\s*(?:(?:周|星期|礼拜)\s*)?([日天一二三四五六])/);
       const monthlySpec = rest.match(/每月(\d{1,2})[日号]/);
       if (weeklyList) {
         repeat = "weekly";

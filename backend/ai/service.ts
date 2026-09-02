@@ -12,6 +12,24 @@ function isFiniteCurrentWeekSentence(text: string): boolean {
   return /(?:本|这)(?:周|星期|礼拜)/.test(text) && !/(?:每(?:周|星期|礼拜)|每天|每日|重复|持续)/.test(text);
 }
 
+/** 明确说“每周”的语句必须保持 weekly 语义，不能被模型改写成本周一次性事项。 */
+function hasExplicitWeeklyRule(text: string): boolean {
+  return /每(?:周|星期|礼拜)/.test(text) && !/(?:本|这)(?:周|星期|礼拜)/.test(text);
+}
+
+/** 时间段是确定性字段；若模型标准化丢掉结束时间，必须回到原句校正。 */
+function hasTimeRange(text: string): boolean {
+  return /(?:\d{1,2}:\d{2}\s*(?:到|至|~|－|—|-|–)\s*\d{1,2}:\d{2})|(?:[零一二两三四五六七八九十\d]{1,3})[点时][零一二两三四五六七八九十\d]{0,2}分?(?:到|至|~|－|—|-)\s*(?:[零一二两三四五六七八九十\d]{1,3})[点时]/.test(
+    text
+  );
+}
+
+function needsOriginalDeterministicParse(input: string, result: ParseResult): boolean {
+  if (hasTimeRange(input) && result.events.some((event) => event.time !== null && !event.endTime)) return true;
+  if (hasExplicitWeeklyRule(input) && result.events.length > 0 && result.events.every((event) => event.repeat !== "weekly")) return true;
+  return false;
+}
+
 export async function parseEvent(
   text: string,
   context?: ParseContext
@@ -36,10 +54,14 @@ export async function parseEvent(
               "$1"
             )
           : canonical;
-        const result = await localParser.parse(
+        let result = await localParser.parse(
           isFiniteCurrentWeekSentence(text) || isCompositeScheduleSentence(text) ? text : safeCanonical,
           context
         );
+        // AI 输出若违反时间段/明确每周的确定性语义，回到原句重算，避免错误结果进入保存流程。
+        if (needsOriginalDeterministicParse(text, result)) {
+          result = await localParser.parse(text, context);
+        }
         // 只要标准化结果可用（有事件或需要追问），就使用它
         if (result.events.length > 0 || result.missing.length > 0) {
           return { result, provider: "openai" };

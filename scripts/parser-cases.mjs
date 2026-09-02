@@ -173,10 +173,32 @@ async function main() {
     r.result.missing.includes("date") && r.result.events?.[0]?.time === "15:00" && r.result.events?.[0]?.endTime === "18:00",
     JSON.stringify(r.result)
   );
+  r = await parse("15:00-18:00 助教开会");
+  check(
+    "AI 标准时间段 HH:mm-HH:mm 可解析",
+    r.result.missing.includes("date") && r.result.events?.[0]?.time === "15:00" && r.result.events?.[0]?.endTime === "18:00",
+    JSON.stringify(r.result)
+  );
   r = await parse("明天", { title: "助教开会", time: "15:00", endTime: "18:00" });
   check(
     "补充日期后仍保存 15:00–18:00",
     r.result.events?.[0]?.date === todayStr(1) && r.result.events?.[0]?.time === "15:00" && r.result.events?.[0]?.endTime === "18:00",
+    JSON.stringify(r.result)
+  );
+  r = await parse("每周周四和周五 15:00-18:00 当助教");
+  check(
+    "AI 标准重复格式保留两个星期和结束时间",
+    r.result.events?.length === 2 &&
+      r.result.events.every((e) => e.title === "当助教" && e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly"),
+    JSON.stringify(r.result)
+  );
+  r = await parse("2026-09-10 15:00-18:00 助教开会；之后每周周四和周五 15:00-18:00 当助教");
+  check(
+    "AI 标准复合格式拆成一次性 + 两条 weekly",
+    r.result.events?.length === 3 &&
+      r.result.events.some((e) => e.title === "助教开会" && e.date === "2026-09-10" && e.time === "15:00" && e.endTime === "18:00" && e.repeat === null) &&
+      r.result.events.filter((e) => e.title === "当助教").length === 2 &&
+      r.result.events.filter((e) => e.title === "当助教").every((e) => e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly"),
     JSON.stringify(r.result)
   );
 

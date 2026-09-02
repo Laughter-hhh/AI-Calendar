@@ -34,8 +34,9 @@ export default function SwipeBack() {
       }
       const target = event.target as HTMLElement | null;
       if (
-        target?.closest("input, textarea, select, button, [contenteditable=\"true\"], [data-swipe-back-ignore]") ||
-        isHorizontalScroller(target)
+        target?.closest(
+          "a, input, textarea, select, button, [role=\"button\"], [contenteditable=\"true\"], [data-swipe-back-ignore]"
+        ) || isHorizontalScroller(target)
       ) {
         start = null;
         return;

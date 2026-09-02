@@ -50,14 +50,29 @@ async function main() {
   check("笔记本路由提供即时加载反馈", notesLoadingSource.includes("aria-busy") && notesLoadingSource.includes("animate-pulse"));
   check("笔记本不在挂载时重复请求列表", !notesSource.includes('fetch("/api/notes");'));
   check(
-    "日历菜单使用客户端导航打开笔记本",
-    scheduleSource.includes('<Link') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')
+    "日历菜单使用兼容导航打开笔记本",
+    scheduleSource.includes('<a') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')
+  );
+  check(
+    "移动端更多菜单明确分离遮罩与可点击面板",
+    scheduleSource.includes('role="dialog"') &&
+      scheduleSource.includes('z-[70]') &&
+      scheduleSource.includes('z-0 cursor-default') &&
+      scheduleSource.includes('z-10 max-h-') &&
+      scheduleSource.includes('overscroll-contain')
+  );
+  check(
+    "移动端菜单导航点击后立即关闭",
+    scheduleSource.includes('href="/settings" className={menuItem} onClick={() => setMenuOpen(false)}') &&
+      scheduleSource.includes('href="/shares" className={menuItem} onClick={() => setMenuOpen(false)}') &&
+      scheduleSource.includes('href="/download" className={menuItem} onClick={() => setMenuOpen(false)}')
   );
   check(
     "移动端左滑返回上一级并避开横向控件",
     swipeSource.includes("touchstart") &&
       swipeSource.includes("touchend") &&
       swipeSource.includes("isHorizontalScroller") &&
+      swipeSource.includes("a, input") &&
       swipeSource.includes("router.back()")
   );
 

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import type { CalendarEvent } from "@/lib/events";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
@@ -165,6 +164,7 @@ export default function ScheduleArea({
           <DateNav date={date} view={view} onNavigate={navigate} />
         </div>
         <button
+          type="button"
           onClick={() => setMenuOpen(true)}
           className="ui-button-secondary h-10 w-11 shrink-0 px-0 text-lg leading-none"
           title="更多功能"
@@ -251,11 +251,20 @@ export default function ScheduleArea({
 
       {/* 更多功能菜单 */}
       {menuOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setMenuOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-sky-100 bg-white/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl backdrop-blur">
+        <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="更多功能">
+          <button
+            type="button"
+            className="absolute inset-0 z-0 cursor-default bg-black/30"
+            aria-label="关闭更多功能"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 z-10 max-h-[min(82vh,42rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-sky-100 bg-white/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl backdrop-blur"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-sky-200" />
             <button
+              type="button"
               className={menuItem}
               onClick={() => {
                 setMenuOpen(false);
@@ -264,10 +273,11 @@ export default function ScheduleArea({
             >
             🔍 搜索日程
             </button>
-            <Link
+            <a
               href="/notes"
               className={menuItem}
               onClick={() => {
+                setMenuOpen(false);
                 try {
                   sessionStorage.setItem("aical:notes-return", window.location.href);
                 } catch {
@@ -276,19 +286,19 @@ export default function ScheduleArea({
               }}
             >
               📒 笔记本（不确定时间的事）
-            </Link>
+            </a>
             <div className="flex items-center gap-2 px-1 py-2">
               <span className="flex-1" />
               <ExportButton from={exportFrom} to={exportTo} />
               <ImportButton />
             </div>
-            <a href="/settings" className={menuItem}>
+            <a href="/settings" className={menuItem} onClick={() => setMenuOpen(false)}>
               ⚙️ 设置（账号 / 共享 / 下载）
             </a>
-            <a href="/shares" className={menuItem}>
+            <a href="/shares" className={menuItem} onClick={() => setMenuOpen(false)}>
               🔗 共享日历
             </a>
-            <a href="/download" className={menuItem}>
+            <a href="/download" className={menuItem} onClick={() => setMenuOpen(false)}>
               📱 下载安卓 App
             </a>
             <p className="mt-2 text-center text-xs text-zinc-400">AI Calendar v{APP_VERSION}</p>

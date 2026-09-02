@@ -17,6 +17,11 @@ function hasExplicitWeeklyRule(text: string): boolean {
   return /每(?:周|星期|礼拜)/.test(text) && !/(?:本|这)(?:周|星期|礼拜)/.test(text);
 }
 
+/** “持续 N 周”由本地规则计算截止日，避免模型漏掉重复周期边界。 */
+function hasWeeklyDuration(text: string): boolean {
+  return /持续\s*[零一二两三四五六七八九十百\d]+\s*周/.test(text);
+}
+
 /** 时间段是确定性字段；若模型标准化丢掉结束时间，必须回到原句校正。 */
 function hasTimeRange(text: string): boolean {
   return /(?:\d{1,2}:\d{2}\s*(?:到|至|~|－|—|-|–)\s*\d{1,2}:\d{2})|(?:[零一二两三四五六七八九十\d]{1,3})[点时][零一二两三四五六七八九十\d]{0,2}分?(?:到|至|~|－|—|-)\s*(?:[零一二两三四五六七八九十\d]{1,3})[点时]/.test(
@@ -27,6 +32,7 @@ function hasTimeRange(text: string): boolean {
 function needsOriginalDeterministicParse(input: string, result: ParseResult): boolean {
   if (hasTimeRange(input) && result.events.some((event) => event.time !== null && !event.endTime)) return true;
   if (hasExplicitWeeklyRule(input) && result.events.length > 0 && result.events.every((event) => event.repeat !== "weekly")) return true;
+  if (hasWeeklyDuration(input)) return true;
   return false;
 }
 

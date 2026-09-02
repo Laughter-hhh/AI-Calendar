@@ -192,6 +192,32 @@ async function main() {
       r.result.events.every((e) => e.title === "当助教" && e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly"),
     JSON.stringify(r.result)
   );
+
+  r = await parse("每周四和周五十五点到十八点助教，从九月十号开始，持续16周");
+  const durationStart = `${new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear()}-09-10`;
+  const durationThursdayEnd = shift(durationStart, 15 * 7);
+  const durationFridayStart = shift(durationStart, 1);
+  const durationFridayEnd = shift(durationFridayStart, 15 * 7);
+  const durationEvents = r.result.events ?? [];
+  check(
+    "每周四/周五从九月十号持续16周 → 两条有限 weekly",
+    durationEvents.length === 2 &&
+      durationEvents.every((e) => e.title === "助教" && e.time === "15:00" && e.endTime === "18:00" && e.repeat === "weekly") &&
+      durationEvents.some((e) => e.date === durationStart && e.repeatUntil === durationThursdayEnd) &&
+      durationEvents.some((e) => e.date === durationFridayStart && e.repeatUntil === durationFridayEnd),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("每天八点喝水，从九月十号开始，持续16周");
+  const dailyDurationEnd = shift(durationStart, 16 * 7 - 1);
+  check(
+    "每天从九月十号持续16周 → 截止日期按周数计算",
+    r.result.events?.length === 1 &&
+      r.result.events[0]?.date === durationStart &&
+      r.result.events[0]?.repeat === "daily" &&
+      r.result.events[0]?.repeatUntil === dailyDurationEnd,
+    JSON.stringify(r.result)
+  );
   r = await parse("2026-09-10 15:00-18:00 助教开会；之后每周周四和周五 15:00-18:00 当助教");
   check(
     "AI 标准复合格式拆成一次性 + 两条 weekly",

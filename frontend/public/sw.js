@@ -1,5 +1,5 @@
 /* AI Calendar 的离线应用壳。用户日程不写入 Cache Storage，避免不同账号在同一设备上串数据。 */
-const SHELL_CACHE = "ai-calendar-shell-v4.5.9";
+const SHELL_CACHE = "ai-calendar-shell-v4.5.10";
 const SHELL_ASSETS = ["/offline.html", "/manifest.webmanifest", "/apple-touch-icon.png"];
 const NAVIGATION_TIMEOUT_MS = 4500;
 const ASSET_TIMEOUT_MS = 8000;

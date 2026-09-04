@@ -45,6 +45,9 @@ async function main() {
   const notesLoadingSource = await readFile(new URL("../frontend/src/app/notes/loading.tsx", import.meta.url), "utf8");
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
   const dateNavSource = await readFile(new URL("../frontend/src/components/DateNav.tsx", import.meta.url), "utf8");
+  const weekViewSource = await readFile(new URL("../frontend/src/components/WeekView.tsx", import.meta.url), "utf8");
+  const dayTimelineSource = await readFile(new URL("../frontend/src/components/DayTimelineView.tsx", import.meta.url), "utf8");
+  const colorsSource = await readFile(new URL("../frontend/src/lib/colors.ts", import.meta.url), "utf8");
   const aiInputSource = await readFile(new URL("../frontend/src/components/AiInput.tsx", import.meta.url), "utf8");
   const eventListSource = await readFile(new URL("../frontend/src/components/EventList.tsx", import.meta.url), "utf8");
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
@@ -86,6 +89,15 @@ async function main() {
   check(
     "手机版“今天”按钮保持单行",
     dateNavSource.includes("shrink-0 whitespace-nowrap") && dateNavSource.includes("title=\"回到今天\"")
+  );
+  check(
+    "事项颜色使用柔和色板",
+    weekViewSource.includes("bg-red-100/90") &&
+      weekViewSource.includes("text-red-800") &&
+      !weekViewSource.includes("bg-red-500/90") &&
+      dayTimelineSource.includes("border-red-300") &&
+      colorsSource.includes('dot: "bg-red-400"') &&
+      colorsSource.includes('red: "text-red-600"')
   );
 
   const email = `ui-${Date.now()}@test.local`;

@@ -6,13 +6,13 @@ import { layoutOverlappingEvents, timeToMinutes } from "@/lib/timeline";
 
 const ROW_HEIGHT = 52;
 const BLOCK_COLORS: Record<string, string> = {
-  red: "border-red-500 bg-red-50 text-red-900",
-  orange: "border-orange-500 bg-orange-50 text-orange-900",
-  amber: "border-amber-500 bg-amber-50 text-amber-900",
-  green: "border-green-500 bg-green-50 text-green-900",
-  blue: "border-sky-500 bg-sky-50 text-sky-900",
-  purple: "border-violet-500 bg-violet-50 text-violet-900",
-  pink: "border-pink-500 bg-pink-50 text-pink-900",
+  red: "border-red-300 bg-red-50 text-red-800",
+  orange: "border-orange-300 bg-orange-50 text-orange-800",
+  amber: "border-amber-300 bg-amber-50 text-amber-800",
+  green: "border-green-300 bg-green-50 text-green-800",
+  blue: "border-sky-300 bg-sky-50 text-sky-800",
+  purple: "border-violet-300 bg-violet-50 text-violet-800",
+  pink: "border-pink-300 bg-pink-50 text-pink-800",
 };
 
 export default function DayTimelineView({

@@ -12,13 +12,13 @@ const ROW_H = 44;
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
 const BLOCK_COLORS: Record<string, string> = {
-  red: "bg-red-500/90 border-red-600 text-white",
-  orange: "bg-orange-500/90 border-orange-600 text-white",
-  amber: "bg-amber-500/90 border-amber-600 text-white",
-  green: "bg-green-500/90 border-green-600 text-white",
-  blue: "bg-sky-500/90 border-sky-600 text-white",
-  purple: "bg-violet-500/90 border-violet-600 text-white",
-  pink: "bg-pink-500/90 border-pink-600 text-white",
+  red: "bg-red-100/90 border-red-300 text-red-800",
+  orange: "bg-orange-100/90 border-orange-300 text-orange-800",
+  amber: "bg-amber-100/90 border-amber-300 text-amber-800",
+  green: "bg-green-100/90 border-green-300 text-green-800",
+  blue: "bg-sky-100/90 border-sky-300 text-sky-800",
+  purple: "bg-violet-100/90 border-violet-300 text-violet-800",
+  pink: "bg-pink-100/90 border-pink-300 text-pink-800",
 };
 
 function shortLabel(d: string): string {

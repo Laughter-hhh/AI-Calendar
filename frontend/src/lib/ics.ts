@@ -174,12 +174,24 @@ function repeatOf(
     })
   );
   const frequency = fields.get("FREQ")?.toUpperCase();
+  const interval = Number(fields.get("INTERVAL") ?? "1");
   const repeat =
-    frequency === "DAILY" ? "daily" : frequency === "WEEKLY" ? "weekly" : frequency === "MONTHLY" ? "monthly" : null;
+    frequency === "DAILY"
+      ? "daily"
+      : frequency === "WEEKLY" && interval === 2
+        ? "biweekly"
+        : frequency === "WEEKLY"
+          ? "weekly"
+          : frequency === "MONTHLY"
+            ? "monthly"
+            : null;
   const until = fields.get("UNTIL")?.match(/^(\d{4})(\d{2})(\d{2})/);
-  let canRepresent = repeat !== null && !fields.has("COUNT") && (!fields.has("INTERVAL") || fields.get("INTERVAL") === "1");
+  let canRepresent =
+    repeat !== null &&
+    !fields.has("COUNT") &&
+    ((repeat === "biweekly" && interval === 2) || (repeat !== "biweekly" && interval === 1));
   const weekdayCodes = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
-  if (repeat === "weekly" && fields.has("BYDAY")) {
+  if ((repeat === "weekly" || repeat === "biweekly") && fields.has("BYDAY")) {
     const byDay = fields.get("BYDAY")?.split(",") ?? [];
     const startWeekday = weekdayCodes[new Date(`${startDate}T00:00:00Z`).getUTCDay()];
     canRepresent = canRepresent && byDay.length === 1 && byDay[0] === startWeekday;

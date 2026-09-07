@@ -11,6 +11,7 @@ type Status = "idle" | "parsing" | "asking" | "preview" | "action";
 function repeatLabel(r?: string | null): string {
   if (r === "daily") return "每天";
   if (r === "weekly") return "每周";
+  if (r === "biweekly") return "每两周";
   if (r === "monthly") return "每月";
   return r ?? "";
 }

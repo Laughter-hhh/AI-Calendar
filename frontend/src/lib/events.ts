@@ -72,6 +72,12 @@ export function occursOn(baseDate: string, repeat: string, target: string): bool
   const targetInfo = dayInfo(target);
   if (repeat === "daily") return true;
   if (repeat === "weekly") return base.weekday === targetInfo.weekday;
+  if (repeat === "biweekly") {
+    const diff = Math.round(
+      (Date.parse(target + "T00:00:00Z") - Date.parse(baseDate + "T00:00:00Z")) / 86_400_000
+    );
+    return diff >= 0 && diff % 14 === 0;
+  }
   if (repeat === "monthly") {
     // 正常：同一天号；月末兜底：base 是月末时，目标日也是其所在月的月末
     if (base.dayOfMonth === targetInfo.dayOfMonth) return true;

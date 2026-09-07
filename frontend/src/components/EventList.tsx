@@ -9,6 +9,7 @@ import { enqueueMutation } from "@/lib/offline";
 function repeatLabel(repeat: string): string {
   if (repeat === "daily") return "每天";
   if (repeat === "weekly") return "每周";
+  if (repeat === "biweekly") return "每两周";
   if (repeat === "monthly") return "每月";
   return repeat;
 }

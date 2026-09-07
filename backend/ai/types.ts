@@ -13,7 +13,7 @@ export interface ParsedEvent {
   endTime?: string | null;
   /** 备注（可选） */
   note?: string;
-  /** 重复规则（未来扩展：daily / weekly / monthly） */
+  /** 重复规则：daily / weekly / biweekly / monthly */
   repeat?: string | null;
   /** 重复截止日期 YYYY-MM-DD（可空） */
   repeatUntil?: string | null;

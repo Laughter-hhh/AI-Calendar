@@ -17,6 +17,11 @@ function hasExplicitWeeklyRule(text: string): boolean {
   return /每(?:周|星期|礼拜)/.test(text) && !/(?:本|这)(?:周|星期|礼拜)/.test(text);
 }
 
+/** 明确说“每两周/隔两周”的语句必须保留 biweekly 语义。 */
+function hasExplicitBiweeklyRule(text: string): boolean {
+  return /(?:每隔|隔|每)\s*(?:两|二|2)\s*周/.test(text);
+}
+
 /** “持续 N 周”由本地规则计算截止日，避免模型漏掉重复周期边界。 */
 function hasWeeklyDuration(text: string): boolean {
   return /持续\s*[零一二两三四五六七八九十百\d]+\s*周/.test(text);
@@ -36,6 +41,7 @@ function hasTimeRange(text: string): boolean {
 
 function needsOriginalDeterministicParse(input: string, result: ParseResult): boolean {
   if (hasTimeRange(input) && result.events.some((event) => event.time !== null && !event.endTime)) return true;
+  if (hasExplicitBiweeklyRule(input) && result.events.length > 0 && result.events.some((event) => event.repeat !== "biweekly")) return true;
   if (hasExplicitWeeklyRule(input) && result.events.length > 0 && result.events.every((event) => event.repeat !== "weekly")) return true;
   if (hasWeeklyDuration(input)) return true;
   if (hasRelativeWeeklyStart(input)) return true;

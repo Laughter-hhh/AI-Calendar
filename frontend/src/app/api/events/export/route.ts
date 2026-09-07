@@ -17,8 +17,9 @@ function esc(s: string): string {
 }
 
 function rruleOf(repeat: string, repeatUntil: string | null): string | null {
-  const freq = repeat === "daily" ? "DAILY" : repeat === "weekly" ? "WEEKLY" : repeat === "monthly" ? "MONTHLY" : null;
+  const freq = repeat === "daily" ? "DAILY" : repeat === "weekly" || repeat === "biweekly" ? "WEEKLY" : repeat === "monthly" ? "MONTHLY" : null;
   if (!freq) return null;
+  if (repeat === "biweekly") return "RRULE:FREQ=WEEKLY;INTERVAL=2" + (repeatUntil ? ";UNTIL=" + fmtDate(repeatUntil) : "");
   return `RRULE:FREQ=${freq}${repeatUntil ? `;UNTIL=${fmtDate(repeatUntil)}` : ""}`;
 }
 

@@ -84,6 +84,38 @@ async function main() {
   r = await parse("每周一晚上八点健身");
   check("每周一 → weekly 20:00", r.result.events?.[0]?.repeat === "weekly" && r.result.events?.[0]?.time === "20:00", JSON.stringify(r.result));
 
+  r = await parse("每隔两周一次周一晚上八点健身");
+  check(
+    "每隔两周一次周一 → biweekly 20:00",
+    r.result.events?.length === 1 &&
+      r.result.events?.[0]?.title === "健身" &&
+      r.result.events?.[0]?.repeat === "biweekly" &&
+      r.result.events?.[0]?.time === "20:00",
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("每两周四晚上八点健身");
+  check(
+    "AI 标准每两周四 → biweekly 20:00",
+    r.result.events?.length === 1 &&
+      r.result.events?.[0]?.title === "健身" &&
+      r.result.events?.[0]?.repeat === "biweekly" &&
+      r.result.events?.[0]?.time === "20:00",
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("从九月十号开始隔两周一次15点到18点助教");
+  const biweeklyStart = new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear() + "-09-10";
+  check(
+    "从明确日期开始隔两周一次 → 保留起点和时间段",
+    r.result.events?.length === 1 &&
+      r.result.events?.[0]?.date === biweeklyStart &&
+      r.result.events?.[0]?.repeat === "biweekly" &&
+      r.result.events?.[0]?.time === "15:00" &&
+      r.result.events?.[0]?.endTime === "18:00",
+    JSON.stringify(r.result)
+  );
+
   r = await parse("本周三和周四晚上九点新生扫楼宣传");
   const currentWeekDates = new Set([currentWeekdayDate(3), currentWeekdayDate(4)]);
   check(

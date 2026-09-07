@@ -145,6 +145,18 @@ export function resolveWeeklyWeekdayList(
   };
 }
 
+/** 解析“每隔两周周一 / 每两周一次周一”这类双周重复规则。 */
+export function resolveBiweeklyWeekdayList(
+  text: string,
+  afterDate?: string,
+  strictlyAfter = afterDate !== undefined
+): { dates: string[]; rest: string } | null {
+  // 复用每周多星期解析的连接词处理，日期锚点仍由调用方传入。
+  const resolved = resolveWeeklyWeekdayList("每周" + text, afterDate, strictlyAfter);
+  if (!resolved) return null;
+  return resolved;
+}
+
 /** 解析“从九月十号开始”这类明确重复起始日期。 */
 function resolveAnchoredStartDate(text: string): { date: string; rest: string } | null {
   const iso = text.match(/(?:从|自)\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*(?:开始|起)?/);
@@ -346,7 +358,7 @@ export const localParser: AIParser = {
     let repeatUntil: string | null = null;
     let repeatWeeks: number | null = null;
     let repeatStart: string | null = null; // 具体规则的起始日（如"每周一"的下一个周一）
-    let repeatStarts: string[] | null = null; // 多个星期几时拆成多个 weekly 事件
+    let repeatStarts: string[] | null = null; // 多个星期几时拆成多个重复事件
 
     const untilMatch = rest.match(/持续(?:到)?(\d{1,2})月(\d{1,2})[日号]?/);
     if (untilMatch) {
@@ -362,12 +374,27 @@ export const localParser: AIParser = {
       rest = rest.replace(weeksMatch[0], " ");
     }
 
-    if (/每天|每日|每晚/.test(rest)) {
+    const repeatBaseDate = anchoredStart?.date ?? context?.afterDate;
+    const strictAfter = anchoredStart ? false : context?.afterDate !== undefined;
+    const biweeklyMatch = rest.match(/(?:每隔|隔|每)\s*(?:两|二|2)\s*周(?:\s*一次)?/);
+    if (biweeklyMatch) {
+      repeat = "biweekly";
+      rest = rest.replace(biweeklyMatch[0], " ");
+      const biweeklyList = resolveBiweeklyWeekdayList(rest, repeatBaseDate, strictAfter);
+      const biweeklySpec = rest.match(
+        /^[\s，,、]*(?:在\s*)?(?:(?:周|星期|礼拜)\s*)?([日天一二三四五六])(?=(?:\s|[点时]|上午|下午|晚上|凌晨|早上|$))/
+      );
+      if (biweeklyList) {
+        repeatStarts = biweeklyList.dates;
+        rest = biweeklyList.rest;
+      } else if (biweeklySpec) {
+        repeatStart = nextWeekdayDate(WEEKDAY_NAME[biweeklySpec[1]], repeatBaseDate, strictAfter);
+        rest = rest.replace(biweeklySpec[0], " ");
+      }
+    } else if (/每天|每日|每晚/.test(rest)) {
       repeat = "daily";
       rest = rest.replace(/每天|每日|每晚/g, " ");
     } else {
-      const repeatBaseDate = anchoredStart?.date ?? context?.afterDate;
-      const strictAfter = anchoredStart ? false : context?.afterDate !== undefined;
       const weeklyList = resolveWeeklyWeekdayList(rest, repeatBaseDate, strictAfter);
       const weeklySpec = rest.match(/每(?:周|星期|礼拜)\s*(?:(?:周|星期|礼拜)\s*)?([日天一二三四五六])/);
       const monthlySpec = rest.match(/每月(\d{1,2})[日号]/);
@@ -507,7 +534,12 @@ export const localParser: AIParser = {
     } else if (repeatDays > 0) {
       message = `已为你安排从 ${startDate} 起连续 ${repeatDays} 天的日程。`;
     } else if (repeat) {
-      const repeatNames: Record<string, string> = { daily: "每天", weekly: "每周", monthly: "每月" };
+      const repeatNames: Record<string, string> = {
+        daily: "每天",
+        weekly: "每周",
+        biweekly: "每两周",
+        monthly: "每月",
+      };
       message = `已为你安排${repeatNames[repeat] ?? repeat}${repeatStarts && repeatStarts.length > 1 ? ` ${repeatStarts.length} 天` : ""}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
     } else if (deadlineDate) {
       message = `已为「${title}」生成截止提醒：提前 7 天、3 天、1 天、当天（截止 ${deadlineDate}）。`;

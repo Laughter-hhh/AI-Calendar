@@ -81,6 +81,22 @@ async function main() {
   const originalId = original.data?.event?.id;
   check("建立原有日程基线", original.status === 201 && originalId);
 
+  const biweekly = await api("/api/events", {
+    method: "POST",
+    body: { title: "双周测试", date: "2026-09-01", time: "15:00", endTime: "16:00", repeat: "biweekly" },
+  });
+  const biweeklyId = biweekly.data?.event?.id;
+  const biweeklyWeek = await api("/api/events?date=2026-09-08");
+  const biweeklyNext = await api("/api/events?date=2026-09-15");
+  check(
+    "双周日程仅在第 14 天展开",
+    biweekly.status === 201 &&
+      biweeklyWeek.data?.events?.every((event) => event.id !== biweeklyId) &&
+      biweeklyNext.data?.events?.some((event) => event.id === biweeklyId && event.date === "2026-09-15"),
+    JSON.stringify({ biweekly: biweekly.data, week: biweeklyWeek.data, next: biweeklyNext.data })
+  );
+  if (biweeklyId) await api("/api/events/" + biweeklyId, { method: "DELETE" });
+
   const conflictCandidate = await api("/api/events", {
     method: "POST",
     body: { title: "冲突提示样本", date: "2026-09-01", time: "09:30", endTime: "10:30" },
@@ -292,6 +308,31 @@ async function main() {
   const complexList = await api("/api/events?date=2026-09-01");
   const importedComplex = complexList.data?.events?.find((event) => event.title === "复杂重复课程");
   check("复杂重复规则降级为首日且给过预警", importedComplex?.repeat === null, JSON.stringify(importedComplex));
+
+  const biweeklyIcs = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    "UID:biweekly-import@example.test",
+    "SUMMARY:外部双周课程",
+    "DTSTART;TZID=Asia/Shanghai:20260901T150000",
+    "DTEND;TZID=Asia/Shanghai:20260901T160000",
+    "RRULE:FREQ=WEEKLY;INTERVAL=2",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const biweeklyImport = await api("/api/events/import", {
+    method: "POST",
+    body: { content: biweeklyIcs, fileName: "biweekly.ics", mode: "import" },
+  });
+  const importedBiweekly = await api("/api/events?date=2026-09-15");
+  check(
+    "ICS 双周规则导入后第 14 天可展开",
+    biweeklyImport.status === 200 &&
+      biweeklyImport.data?.imported === 1 &&
+      importedBiweekly.data?.events?.some((event) => event.title === "外部双周课程" && event.repeat === "biweekly"),
+    JSON.stringify({ import: biweeklyImport.data, events: importedBiweekly.data })
+  );
 
   const thirdOverlap = await api("/api/events", {
     method: "POST",

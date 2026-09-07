@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
@@ -71,35 +71,41 @@ export default function ScheduleArea({
   const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
   const [usingCachedData, setUsingCachedData] = useState(false);
+  const loadRequestRef = useRef(0);
   const networkOffline = useSyncExternalStore(subscribeToNetwork, getNetworkOffline, getServerNetworkOffline);
   const offline = networkOffline || usingCachedData;
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(initialQuery !== "");
   const [dayMode, setDayMode] = useState<"list" | "timeline">("list");
 
-  // 首屏服务端数据也写入账号隔离缓存，让手机完全离线重新打开时仍能看到最近日程。
+  // 只缓存服务端首屏对应的请求，避免切换日期时把尚未更新的旧数组写进新日期缓存。
+  const initialDataUrl = buildDataUrl(initialDate, initialView);
   useEffect(() => {
     setOfflineUserId(userId);
-    cacheSet(buildDataUrl(date, view), { events });
-  }, [date, events, userId, view]);
+    cacheSet(initialDataUrl, { events: initialEvents });
+  }, [initialDataUrl, initialEvents, userId]);
 
   const load = useCallback(async (d: string, v: View) => {
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
       const url = buildDataUrl(d, v);
       const res = await fetchCachedJson<{ events: CalendarEvent[] }>(url);
-      if (res.data?.events) setEvents(res.data.events);
+      if (requestId !== loadRequestRef.current) return;
+      setEvents(res.data?.events ?? []);
       setUsingCachedData(res.fromCache || !isOnline());
     } catch {
-      // 网络异常保留旧数据
+      if (requestId === loadRequestRef.current) setEvents([]);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
   }, []);
 
   function navigate(d: string, v: View) {
     setDate(d);
     setView(v);
+    setEvents([]);
+    setUsingCachedData(false);
     window.history.pushState(null, "", buildUrl(d, v, query));
     void load(d, v);
   }
@@ -120,6 +126,8 @@ export default function ScheduleArea({
       setView(v);
       setQuery(q);
       setSearchOpen(q !== "");
+      setEvents([]);
+      setUsingCachedData(false);
       void load(d, v);
     };
     window.addEventListener("popstate", onPop);
@@ -162,9 +170,10 @@ export default function ScheduleArea({
   }
 
   const today = todayStr();
+  const dayEvents = view === "day" ? events.filter((event) => event.date === date) : events;
   const upcoming =
     view === "day" && date === today
-      ? (events
+      ? (dayEvents
           .filter((e) => e.startTime && e.startTime >= initialCurrentTime)
           .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""))[0] ?? null)
       : null;
@@ -221,7 +230,7 @@ export default function ScheduleArea({
 
       {view === "day" && (
         <div className="mb-3 flex items-center justify-between gap-3">
-          <span className="text-xs font-medium text-sky-700/70">{events.length} 项</span>
+          <span className="text-xs font-medium text-sky-700/70">{dayEvents.length} 项</span>
           <div className="ui-segment" aria-label="单日显示方式">
             {(["list", "timeline"] as const).map((mode) => (
               <button
@@ -249,14 +258,14 @@ export default function ScheduleArea({
           <WeekView initialEvents={events} startDate={date} query={query} onSelectDay={(d) => navigate(d, "day")} />
         ) : dayMode === "timeline" ? (
           <DayTimelineView
-            events={events}
+            events={dayEvents}
             query={query}
             date={date}
             currentTime={initialCurrentTime}
           />
         ) : (
           <EventList
-            events={events}
+            events={dayEvents}
             isToday={date === today}
             query={query}
             onRefresh={() => load(date, "day")}

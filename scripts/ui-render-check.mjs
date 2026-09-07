@@ -79,6 +79,14 @@ async function main() {
       aiInputSource.includes("保存完成后主动通知当前视图重新读取")
   );
   check(
+    "日期/视图切换不会混入旧请求或旧日期事项",
+    scheduleSource.includes("loadRequestRef") &&
+      scheduleSource.includes("requestId !== loadRequestRef.current") &&
+      scheduleSource.includes("const dayEvents = view === \"day\" ? events.filter((event) => event.date === date)") &&
+      scheduleSource.includes("setEvents([])") &&
+      scheduleSource.includes("cacheSet(initialDataUrl, { events: initialEvents })")
+  );
+  check(
     "移动端左滑返回上一级并避开横向控件",
     swipeSource.includes("touchstart") &&
       swipeSource.includes("touchend") &&

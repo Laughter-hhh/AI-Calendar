@@ -31,7 +31,11 @@ async function main() {
   check("离线回退页包含重新连接入口", offlineSource.includes("当前处于离线状态") && offlineSource.includes('href="/"'));
   check("离线界面可读取账号隔离缓存", offlineSource.includes("aical:active-user") && offlineSource.includes("aical:cache:"));
   check("离线界面支持事项/时间线切换", offlineSource.includes('data-view="list"') && offlineSource.includes('data-view="timeline"'));
-  check("日历首屏写入离线缓存", scheduleSource.includes("setOfflineUserId(userId)") && scheduleSource.includes('cacheSet(buildDataUrl(date, view)'));
+  check(
+    "日历首屏写入离线缓存",
+    scheduleSource.includes("setOfflineUserId(userId)") &&
+      scheduleSource.includes("cacheSet(initialDataUrl, { events: initialEvents })")
+  );
   check("离线写入队列支持入队与联网重放", offlineClientSource.includes("enqueueMutation") && offlineClientSource.includes("flushMutationQueue"));
   check("离线队列按账号隔离", offlineClientSource.includes('const MUTATION_KEY = "__pending_mutations"') && offlineClientSource.includes("function storageKey") && offlineClientSource.includes("cacheGet(MUTATION_KEY)"));
   check("离线网络请求有超时且可重试", offlineClientSource.includes("AbortController") && offlineClientSource.includes("userIdPromise = null"));

@@ -53,8 +53,16 @@ export default function SwipeBack() {
       start = null;
       if (dx > -SWIPE_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.25) return;
 
-      // 只响应 Next 已建立的应用内历史，避免首次打开应用时滑出到外部网站。
-      if (window.history.length > 1 && window.history.state?.__NA) router.back();
+      // 原生菜单链接在部分 WebView 中不会保留 Next 的 __NA 标记；
+      // 同源 referrer 仍能证明这是应用内页面，允许安全返回。
+      let sameOriginReferrer = false;
+      try {
+        sameOriginReferrer =
+          document.referrer.length > 0 && new URL(document.referrer).origin === window.location.origin;
+      } catch {
+        sameOriginReferrer = false;
+      }
+      if (window.history.length > 1 && (window.history.state?.__NA || sameOriginReferrer)) router.back();
     }
 
     window.addEventListener("touchstart", onTouchStart, { passive: true });

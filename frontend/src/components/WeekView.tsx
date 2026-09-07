@@ -84,12 +84,12 @@ export default function WeekView({
         </div>
 
         {/* 全天/待办 */}
-        <div className="flex border-b border-sky-100 bg-sky-50/65">
+        <div className="flex min-w-0 border-b border-sky-100 bg-sky-50/65">
           <div className="w-12 shrink-0" />
           {days.map((d) => {
             const todos = byDay(d).filter((e) => !e.startTime);
             return (
-              <div key={d} className="min-h-9 flex-1 border-l border-sky-100 px-1 py-1">
+              <div key={d} className="min-h-9 min-w-0 flex-1 overflow-hidden border-l border-sky-100 px-1 py-1">
                 {todos.slice(0, 3).map((ev) => (
                   <span
                     key={`${ev.id}-${d}`}
@@ -125,7 +125,7 @@ export default function WeekView({
           {days.map((d) => (
             <div
               key={d}
-              className="relative flex-1 border-l border-sky-100"
+              className="relative min-w-0 flex-1 border-l border-sky-100"
               style={{ height: timelineHeight }}
             >
               {hourLines.map((h) => (

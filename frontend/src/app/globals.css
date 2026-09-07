@@ -168,3 +168,12 @@ textarea {
   background: #effaff;
   color: #1e4f73;
 }
+
+/* 全天待办在日时间线中按列收缩，长标题只省略，不撑开时间区域。 */
+[data-all-day-items] > span {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

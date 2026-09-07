@@ -47,7 +47,7 @@ export default function DayTimelineView({
       {todos.length > 0 && (
         <div className="flex items-center gap-2 border-b border-sky-100 bg-sky-50/70 px-4 py-2.5">
           <span className="shrink-0 text-[11px] font-semibold text-sky-700/70">全天</span>
-          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          <div className="grid min-w-0 flex-1 grid-cols-1 gap-1 sm:grid-cols-2" data-all-day-items>
             {todos.map((event) => (
               <span
                 key={event.id}

@@ -83,6 +83,7 @@ async function main() {
     swipeSource.includes("touchstart") &&
       swipeSource.includes("touchend") &&
       swipeSource.includes("isHorizontalScroller") &&
+      swipeSource.includes("document.referrer") &&
       swipeSource.includes("a, input") &&
       swipeSource.includes("router.back()")
   );
@@ -98,6 +99,13 @@ async function main() {
       dayTimelineSource.includes("border-red-300") &&
       colorsSource.includes('dot: "bg-red-400"') &&
       colorsSource.includes('red: "text-red-600"')
+  );
+  check(
+    "长待办不挤压周视图时间网格",
+    weekViewSource.includes("min-w-0 flex-1 overflow-hidden") &&
+      weekViewSource.includes("relative min-w-0 flex-1") &&
+      dayTimelineSource.includes("grid min-w-0 flex-1") &&
+      scheduleSource.includes("pageshow")
   );
 
   const email = `ui-${Date.now()}@test.local`;

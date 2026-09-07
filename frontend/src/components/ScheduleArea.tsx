@@ -141,6 +141,18 @@ export default function ScheduleArea({
     };
   }, [date, load, view]);
 
+  // 从设置/笔记本等菜单页通过手机返回时，bfcache 可能恢复旧的 loading 状态；
+  // 先解除遮罩，再在后台同步当前视图，避免回到主界面看起来卡住。
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setLoading(false);
+      void load(date, view);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [date, load, view]);
+
   let exportFrom = date;
   let exportTo = date;
   if (view === "week") exportTo = shiftDate(date, 6);

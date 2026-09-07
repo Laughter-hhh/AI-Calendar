@@ -11,6 +11,7 @@ function repeatLabel(repeat: string): string {
   if (repeat === "weekly") return "每周";
   if (repeat === "biweekly") return "每两周";
   if (repeat === "monthly") return "每月";
+  if (repeat === "weekly-custom") return "自定义周次";
   return repeat;
 }
 
@@ -172,6 +173,7 @@ export default function EventList({
       color: draft.color || null,
       repeat: editScope === "series" ? (draft.repeat === "none" ? null : draft.repeat) : undefined,
       repeatUntil: editScope === "series" && draft.repeat === "none" ? null : undefined,
+      repeatConfig: editScope === "series" && draft.repeat !== "weekly-custom" ? null : undefined,
       mode: editScope,
       occurrenceDate: editOccurrenceDate,
     };

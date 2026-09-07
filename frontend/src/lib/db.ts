@@ -77,6 +77,9 @@ function ensureEventsColumns(db: DatabaseSync): void {
   if (!cols.some((c) => c.name === "repeat_until")) {
     db.exec("ALTER TABLE events ADD COLUMN repeat_until TEXT");
   }
+  if (!cols.some((c) => c.name === "repeat_config")) {
+    db.exec("ALTER TABLE events ADD COLUMN repeat_config TEXT");
+  }
   if (!cols.some((c) => c.name === "color")) {
     db.exec("ALTER TABLE events ADD COLUMN color TEXT");
   }

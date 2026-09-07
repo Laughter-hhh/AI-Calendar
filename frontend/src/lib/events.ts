@@ -13,6 +13,7 @@ export interface CalendarEvent {
   note: string | null;
   repeat: string | null;
   repeatUntil: string | null;
+  repeatConfig: string | null;
   color: string | null;
   done: boolean;
   sourceText: string | null;
@@ -30,6 +31,7 @@ export interface NewEvent {
   note?: string | null;
   repeat?: string | null;
   repeatUntil?: string | null;
+  repeatConfig?: string | null;
   color?: string | null;
   done?: boolean;
   sourceText?: string | null;
@@ -51,6 +53,7 @@ function mapRow(row: Record<string, unknown>): CalendarEvent {
     note: row.note === null ? null : String(row.note),
     repeat: row.repeat === null ? null : String(row.repeat),
     repeatUntil: row.repeat_until === null ? null : String(row.repeat_until),
+    repeatConfig: row.repeat_config === null || row.repeat_config === undefined ? null : String(row.repeat_config),
     color: row.color === null ? null : String(row.color),
     done: Number(row.done) === 1,
     sourceText: row.source_text === null ? null : String(row.source_text),
@@ -65,8 +68,38 @@ function dayInfo(dateStr: string): { weekday: number; dayOfMonth: number; daysIn
   return { weekday: d.getUTCDay(), dayOfMonth: d.getUTCDate(), daysInMonth };
 }
 
+interface CustomRepeatConfig {
+  weekNumbers?: number[];
+  monthWeekNumbers?: number[];
+  excludeWeekNumbers?: number[];
+  excludeMonthWeekNumbers?: number[];
+  excludeDates?: string[];
+  excludeWeekContainingDates?: string[];
+}
+
+function parseRepeatConfig(value: string | null | undefined): CustomRepeatConfig {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as CustomRepeatConfig;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function weekOfMonth(dateStr: string): number {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const firstWeekdayMonday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+  return Math.floor((day + firstWeekdayMonday - 1) / 7) + 1;
+}
+
+function mondayOf(dateStr: string): string {
+  const weekday = dayInfo(dateStr).weekday;
+  return shiftDate(dateStr, -(weekday === 0 ? 6 : weekday - 1));
+}
+
 /** 重复规则是否覆盖目标日期 */
-export function occursOn(baseDate: string, repeat: string, target: string): boolean {
+export function occursOn(baseDate: string, repeat: string, target: string, repeatConfig?: string | null): boolean {
   if (target < baseDate) return false;
   const base = dayInfo(baseDate);
   const targetInfo = dayInfo(target);
@@ -77,6 +110,22 @@ export function occursOn(baseDate: string, repeat: string, target: string): bool
       (Date.parse(target + "T00:00:00Z") - Date.parse(baseDate + "T00:00:00Z")) / 86_400_000
     );
     return diff >= 0 && diff % 14 === 0;
+  }
+  if (repeat === "weekly-custom") {
+    const diff = Math.round(
+      (Date.parse(target + "T00:00:00Z") - Date.parse(baseDate + "T00:00:00Z")) / 86_400_000
+    );
+    if (diff < 0 || diff % 7 !== 0) return false;
+    const config = parseRepeatConfig(repeatConfig);
+    const weekNumber = Math.floor(diff / 7) + 1;
+    if (config.weekNumbers && config.weekNumbers.length > 0 && !config.weekNumbers.includes(weekNumber)) return false;
+    const monthWeek = weekOfMonth(target);
+    if (config.monthWeekNumbers && config.monthWeekNumbers.length > 0 && !config.monthWeekNumbers.includes(monthWeek)) return false;
+    if (config.excludeWeekNumbers?.includes(weekNumber)) return false;
+    if (config.excludeMonthWeekNumbers?.includes(monthWeek)) return false;
+    if (config.excludeDates?.includes(target)) return false;
+    if (config.excludeWeekContainingDates?.some((date) => mondayOf(date) === mondayOf(target))) return false;
+    return true;
   }
   if (repeat === "monthly") {
     // 正常：同一天号；月末兜底：base 是月末时，目标日也是其所在月的月末
@@ -117,7 +166,7 @@ function eventsForOwnerOnDate(db: ReturnType<typeof getDb>, ownerId: number, dat
     if (byId.has(ev.id)) continue; // 直接事件已覆盖
     if (exceptions.has(ev.id)) continue; // 本日被排除
     if (ev.repeatUntil && date > ev.repeatUntil) continue;
-    if (occursOn(ev.date, ev.repeat!, date)) {
+    if (occursOn(ev.date, ev.repeat!, date, ev.repeatConfig)) {
       byId.set(ev.id, { ...ev, date });
     }
   }
@@ -207,7 +256,7 @@ export function listEventsRange(userId: number, from: string, to: string): Calen
       let guard = 0;
       while (d <= to && guard < 400) {
         if (ev.repeatUntil && d > ev.repeatUntil) break;
-        if (d >= ev.date && !exceptions.has(`${ev.id}:${d}`) && occursOn(ev.date, ev.repeat!, d)) {
+        if (d >= ev.date && !exceptions.has(`${ev.id}:${d}`) && occursOn(ev.date, ev.repeat!, d, ev.repeatConfig)) {
           out.push({ ...ev, date: d, ownerEmail: owner.email });
         }
         d = shiftDate(d, 1);
@@ -261,8 +310,8 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
   const color = data.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
   const info = getDb()
     .prepare(
-      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid, updated_at, series_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`
+      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, repeat_config, color, done, source_text, external_uid, updated_at, series_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`
     )
     .run(
       userId,
@@ -273,6 +322,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
       data.note ?? null,
       data.repeat ?? null,
       data.repeatUntil ?? null,
+      data.repeatConfig ?? null,
       color,
       data.done ? 1 : 0,
       data.sourceText ?? null,
@@ -288,6 +338,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
     note: data.note ?? null,
     repeat: data.repeat ?? null,
     repeatUntil: data.repeatUntil ?? null,
+    repeatConfig: data.repeatConfig ?? null,
     color,
     done: data.done === true,
     sourceText: data.sourceText ?? null,
@@ -315,9 +366,9 @@ export function importEvents(userId: number, events: ImportedEvent[]): { importe
   const db = getDb();
   const known = existingExternalUids(userId, events.map((event) => event.externalUid));
   const insert = db.prepare(
-    `INSERT OR IGNORE INTO events
-      (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, color, done, source_text, external_uid, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      `INSERT OR IGNORE INTO events
+      (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, repeat_config, color, done, source_text, external_uid, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
   );
   let imported = 0;
   let duplicates = 0;
@@ -339,6 +390,7 @@ export function importEvents(userId: number, events: ImportedEvent[]): { importe
         event.note ?? null,
         event.repeat ?? null,
         event.repeatUntil ?? null,
+        event.repeatConfig ?? null,
         color,
         event.done ? 1 : 0,
         event.sourceText ?? null,
@@ -379,6 +431,7 @@ export function updateEvent(
     note: data.note !== undefined ? data.note : (existing.note as string | null),
     repeat: data.repeat !== undefined ? data.repeat : (existing.repeat as string | null),
     repeatUntil: data.repeatUntil !== undefined ? data.repeatUntil : (existing.repeat_until as string | null),
+    repeatConfig: data.repeatConfig !== undefined ? data.repeatConfig : (existing.repeat_config as string | null),
     color: data.color !== undefined ? data.color : (existing.color as string | null),
     done: data.done !== undefined ? data.done === true : Number(existing.done) === 1,
     sourceText: data.sourceText !== undefined ? data.sourceText : (existing.source_text as string | null),
@@ -389,7 +442,7 @@ export function updateEvent(
 
   db.prepare(
     `UPDATE events
-     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, color = ?, done = ?, source_text = ?, updated_at = datetime('now')
+     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, repeat_config = ?, color = ?, done = ?, source_text = ?, updated_at = datetime('now')
      WHERE id = ? AND user_id = ?`
   ).run(
     merged.title,
@@ -399,6 +452,7 @@ export function updateEvent(
     merged.note,
     merged.repeat,
     merged.repeatUntil,
+    merged.repeatConfig,
     merged.color,
     merged.done ? 1 : 0,
     merged.sourceText,
@@ -439,6 +493,7 @@ export function updateSingleOccurrence(
     note: data.note !== undefined ? data.note : (existing.note as string | null),
     repeat: null,
     repeatUntil: null,
+    repeatConfig: null,
     color: data.color !== undefined ? data.color : (existing.color as string | null),
     done: data.done !== undefined ? data.done : Number(existing.done) === 1,
     sourceText: data.sourceText !== undefined ? data.sourceText : (existing.source_text as string | null),
@@ -505,7 +560,11 @@ export function deleteOccurrences(
   db.exec("BEGIN IMMEDIATE");
   try {
     for (const date of uniqueDates) {
-      if (date < baseDate || (ev.repeat_until !== null && date > String(ev.repeat_until)) || !occursOn(baseDate, repeat, date)) {
+      if (
+        date < baseDate ||
+        (ev.repeat_until !== null && date > String(ev.repeat_until)) ||
+        !occursOn(baseDate, repeat, date, ev.repeat_config === null ? null : String(ev.repeat_config))
+      ) {
         continue;
       }
       // 如果该周曾被“仅本次编辑”复制成独立事件，连同副本一起移除。

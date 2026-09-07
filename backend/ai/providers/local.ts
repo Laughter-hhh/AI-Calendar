@@ -211,6 +211,57 @@ function splitCompositeSchedule(text: string): { first: string; recurring: strin
   return { first: match[1].trim(), recurring: match[2].trim() };
 }
 
+function parseWeekNumberList(value: string): number[] {
+  return [...new Set((value.match(/[零一二两三四五六七八九十百\d]+/g) ?? [])
+    .map(cnToNumber)
+    .filter((value): value is number => value !== null && value >= 1 && value <= 53))].sort((a, b) => a - b);
+}
+
+function resolveCustomWeekRules(text: string): {
+  rest: string;
+  weekNumbers: number[];
+  excludedWeekNumbers: number[];
+  excludedDates: string[];
+  monthMode: boolean;
+} | null {
+  const includePattern =
+    /第\s*([零一二两三四五六七八九十百\d]+(?:\s*(?:、|,|，|和|及)\s*第?\s*[零一二两三四五六七八九十百\d]+)*)\s*周/g;
+  const excludePattern =
+    /(?:除了|排除|不含|不安排)\s*第\s*([零一二两三四五六七八九十百\d]+(?:\s*(?:、|,|，|和|及)\s*第?\s*[零一二两三四五六七八九十百\d]+)*)\s*周/g;
+  const excludeDatePattern =
+    /(?:除了|排除|不含|不安排)\s*((?:\d{4}-\d{1,2}-\d{1,2}|[零一二两三四五六七八九十百\d]{1,3}月[零一二两三四五六七八九十百\d]{1,3}[日号]?))\s*所在的?(?:那|该)?周/g;
+  const excludes = [...text.matchAll(excludePattern)];
+  const excludedRanges = excludes.map((match) => ({
+    start: match.index ?? -1,
+    end: (match.index ?? -1) + match[0].length,
+  }));
+  const includes = [...text.matchAll(includePattern)].filter((match) => {
+    const start = match.index ?? -1;
+    return !excludedRanges.some((range) => start >= range.start && start < range.end);
+  });
+  const excludedDates = [...text.matchAll(excludeDatePattern)]
+    .map((match) => resolveDate(match[1])?.date)
+    .filter((date): date is string => Boolean(date));
+  if (includes.length === 0 && excludes.length === 0 && excludedDates.length === 0) return null;
+
+  const weekNumbers = [...new Set(includes.flatMap((match) => parseWeekNumberList(match[1])))];
+  const excludedWeekNumbers = [...new Set(excludes.flatMap((match) => parseWeekNumberList(match[1])))];
+  let rest = text
+    .replace(excludePattern, " ")
+    .replace(excludeDatePattern, " ")
+    .replace(includePattern, " ")
+    .replace(/\s*(?:、|,|，|和|及)\s*(?=(?:第|周|星期|礼拜))/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return {
+    rest,
+    weekNumbers,
+    excludedWeekNumbers,
+    excludedDates: [...new Set(excludedDates)],
+    monthMode: /每月|每个月|一个月内|月内/.test(text),
+  };
+}
+
 /** 判断是否应绕过模型标准化，保留一次性 + 重复两段的原始语义。 */
 export function isCompositeScheduleSentence(text: string): boolean {
   return splitCompositeSchedule(text.trim()) !== null;
@@ -359,6 +410,7 @@ export const localParser: AIParser = {
     let repeatWeeks: number | null = null;
     let repeatStart: string | null = null; // 具体规则的起始日（如"每周一"的下一个周一）
     let repeatStarts: string[] | null = null; // 多个星期几时拆成多个重复事件
+    let repeatConfig: string | null = null;
 
     const untilMatch = rest.match(/持续(?:到)?(\d{1,2})月(\d{1,2})[日号]?/);
     if (untilMatch) {
@@ -374,10 +426,46 @@ export const localParser: AIParser = {
       rest = rest.replace(weeksMatch[0], " ");
     }
 
+    const customWeekRule = resolveCustomWeekRules(rest);
+    if (customWeekRule) rest = customWeekRule.rest;
     const repeatBaseDate = anchoredStart?.date ?? context?.afterDate;
     const strictAfter = anchoredStart ? false : context?.afterDate !== undefined;
     const biweeklyMatch = rest.match(/(?:每隔|隔|每)\s*(?:两|二|2)\s*周(?:\s*一次)?/);
-    if (biweeklyMatch) {
+    if (customWeekRule) {
+      const config: {
+        weekNumbers?: number[];
+        monthWeekNumbers?: number[];
+        excludeWeekNumbers?: number[];
+        excludeMonthWeekNumbers?: number[];
+        excludeDates?: string[];
+      } = {};
+      if (customWeekRule.weekNumbers.length > 0) {
+        if (customWeekRule.monthMode) config.monthWeekNumbers = customWeekRule.weekNumbers;
+        else config.weekNumbers = customWeekRule.weekNumbers;
+      }
+      if (customWeekRule.excludedWeekNumbers.length > 0) {
+        if (customWeekRule.monthMode) config.excludeMonthWeekNumbers = customWeekRule.excludedWeekNumbers;
+        else config.excludeWeekNumbers = customWeekRule.excludedWeekNumbers;
+      }
+      if (customWeekRule.excludedDates.length > 0) config.excludeDates = customWeekRule.excludedDates;
+      repeatConfig = JSON.stringify(config);
+      repeat = "weekly-custom";
+      const customRest = rest
+        .replace(/每月|每个月|一个月内|月内/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const customWeekdayList = resolveWeeklyWeekdayList("每周" + customRest, repeatBaseDate, strictAfter);
+      const customWeekdaySpec = customRest.match(/^[\s，,、]*(?:每\s*)?(?:周|星期|礼拜)\s*([日天一二三四五六])/);
+      if (customWeekdayList) {
+        repeatStarts = customWeekdayList.dates;
+        rest = customWeekdayList.rest;
+      } else if (customWeekdaySpec) {
+        repeatStart = nextWeekdayDate(WEEKDAY_NAME[customWeekdaySpec[1]], repeatBaseDate, strictAfter);
+        rest = customRest.replace(customWeekdaySpec[0], " ");
+      } else {
+        rest = customRest;
+      }
+    } else if (biweeklyMatch) {
       repeat = "biweekly";
       rest = rest.replace(biweeklyMatch[0], " ");
       const biweeklyList = resolveBiweeklyWeekdayList(rest, repeatBaseDate, strictAfter);
@@ -512,8 +600,14 @@ export const localParser: AIParser = {
             repeatDays > 0 || finiteDates
               ? null
               : repeatWeeks && repeat
-                ? addDaysStr(eventDate, repeat === "weekly" ? (repeatWeeks - 1) * 7 : repeatWeeks * 7 - 1)
+                ? addDaysStr(
+                    eventDate,
+                    repeat === "weekly" || repeat === "weekly-custom"
+                      ? (repeatWeeks - 1) * 7
+                      : repeatWeeks * 7 - 1
+                  )
                 : repeatUntil,
+          repeatConfig: repeatDays > 0 || finiteDates ? null : repeatConfig,
           note: undefined,
         });
       }
@@ -538,6 +632,7 @@ export const localParser: AIParser = {
         daily: "每天",
         weekly: "每周",
         biweekly: "每两周",
+        "weekly-custom": "自定义周次",
         monthly: "每月",
       };
       message = `已为你安排${repeatNames[repeat] ?? repeat}${repeatStarts && repeatStarts.length > 1 ? ` ${repeatStarts.length} 天` : ""}重复的日程${repeatUntil ? `，至 ${repeatUntil} 结束` : ""}。`;
@@ -551,7 +646,10 @@ export const localParser: AIParser = {
     }
 
     return Promise.resolve({
-      events: missing.length > 0 ? [{ title, date: startDate ?? "", time, endTime, repeat, repeatUntil }] : events,
+      events:
+        missing.length > 0
+          ? [{ title, date: startDate ?? "", time, endTime, repeat, repeatUntil, repeatConfig }]
+          : events,
       missing,
       message,
     });

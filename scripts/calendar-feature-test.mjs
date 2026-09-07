@@ -289,6 +289,81 @@ async function main() {
   );
   if (batchRepeatId) await api("/api/events/" + batchRepeatId, { method: "DELETE" });
 
+  const customRepeat = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "非连续周次测试",
+      date: "2026-09-01",
+      time: "15:00",
+      endTime: "16:00",
+      repeat: "weekly-custom",
+      repeatConfig: JSON.stringify({ weekNumbers: [1, 3, 6, 7] }),
+    },
+  });
+  const customRepeatId = customRepeat.data?.event?.id;
+  const customWeek1 = await api("/api/events?date=2026-09-01");
+  const customWeek2 = await api("/api/events?date=2026-09-08");
+  const customWeek3 = await api("/api/events?date=2026-09-15");
+  const customWeek6 = await api("/api/events?date=2026-10-06");
+  const customWeek7 = await api("/api/events?date=2026-10-13");
+  check(
+    "非连续第1/3/6/7周保存后按规则展开",
+    customRepeat.status === 201 &&
+      customWeek1.data?.events?.some((event) => event.id === customRepeatId) &&
+      !customWeek2.data?.events?.some((event) => event.id === customRepeatId) &&
+      customWeek3.data?.events?.some((event) => event.id === customRepeatId) &&
+      customWeek6.data?.events?.some((event) => event.id === customRepeatId) &&
+      customWeek7.data?.events?.some((event) => event.id === customRepeatId),
+    JSON.stringify({ customRepeat: customRepeat.data, week2: customWeek2.data })
+  );
+
+  const monthlyCustom = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "按月周次测试",
+      date: "2026-09-03",
+      time: "20:00",
+      repeat: "weekly-custom",
+      repeatConfig: JSON.stringify({ monthWeekNumbers: [1, 3] }),
+    },
+  });
+  const monthlyCustomId = monthlyCustom.data?.event?.id;
+  const monthWeek1 = await api("/api/events?date=2026-09-03");
+  const monthWeek2 = await api("/api/events?date=2026-09-10");
+  const monthWeek3 = await api("/api/events?date=2026-09-17");
+  check(
+    "按月第1/3周重复并跳过第2周",
+    monthlyCustom.status === 201 &&
+      monthWeek1.data?.events?.some((event) => event.id === monthlyCustomId) &&
+      !monthWeek2.data?.events?.some((event) => event.id === monthlyCustomId) &&
+      monthWeek3.data?.events?.some((event) => event.id === monthlyCustomId),
+    JSON.stringify({ monthlyCustom: monthlyCustom.data, week2: monthWeek2.data })
+  );
+
+  const excludedWeek = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "排除日期所在周测试",
+      date: "2026-09-03",
+      time: "21:00",
+      repeat: "weekly-custom",
+      repeatConfig: JSON.stringify({ excludeWeekContainingDates: ["2026-09-10"] }),
+    },
+  });
+  const excludedWeekId = excludedWeek.data?.event?.id;
+  const excludedDateResult = await api("/api/events?date=2026-09-10");
+  const keptAfterExcludedWeek = await api("/api/events?date=2026-09-17");
+  check(
+    "排除某日期所在整周而保留后续周",
+    excludedWeek.status === 201 &&
+      !excludedDateResult.data?.events?.some((event) => event.id === excludedWeekId) &&
+      keptAfterExcludedWeek.data?.events?.some((event) => event.id === excludedWeekId),
+    JSON.stringify({ excluded: excludedDateResult.data, kept: keptAfterExcludedWeek.data })
+  );
+  for (const id of [customRepeatId, monthlyCustomId, excludedWeekId]) {
+    if (id) await api("/api/events/" + id, { method: "DELETE" });
+  }
+
   const compatibilityIcs = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

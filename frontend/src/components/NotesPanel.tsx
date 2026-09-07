@@ -34,6 +34,7 @@ function repeatLabel(r?: string | null): string {
   if (r === "weekly") return "每周";
   if (r === "biweekly") return "每两周";
   if (r === "monthly") return "每月";
+  if (r === "weekly-custom") return "自定义周次";
   return "";
 }
 
@@ -229,6 +230,7 @@ export default function NotesPanel({ initialNotes, userId }: { initialNotes: Not
             note: convert.noteText.trim() || null,
             repeat: ev.repeat ?? null,
             repeatUntil: ev.repeatUntil ?? null,
+            repeatConfig: ev.repeatConfig ?? null,
           };
         }
         return {
@@ -239,6 +241,7 @@ export default function NotesPanel({ initialNotes, userId }: { initialNotes: Not
           note: ev.note ?? null,
           repeat: ev.repeat ?? null,
           repeatUntil: ev.repeatUntil ?? null,
+          repeatConfig: ev.repeatConfig ?? null,
         };
       });
       for (const ev of events) {

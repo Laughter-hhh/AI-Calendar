@@ -13,10 +13,12 @@ export interface ParsedEvent {
   endTime?: string | null;
   /** 备注（可选） */
   note?: string;
-  /** 重复规则：daily / weekly / biweekly / monthly */
+  /** 重复规则：daily / weekly / biweekly / monthly / weekly-custom */
   repeat?: string | null;
   /** 重复截止日期 YYYY-MM-DD（可空） */
   repeatUntil?: string | null;
+  /** 自定义周次与排除规则 JSON */
+  repeatConfig?: string | null;
 }
 
 /** AI 解析的完整结果 */

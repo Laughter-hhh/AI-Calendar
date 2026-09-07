@@ -27,6 +27,11 @@ function hasWeeklyDuration(text: string): boolean {
   return /持续\s*[零一二两三四五六七八九十百\d]+\s*周/.test(text);
 }
 
+/** 指定周次或排除周次必须保留为 weekly-custom，不能被模型压平为普通每周。 */
+function hasExplicitCustomWeekRule(text: string): boolean {
+  return /第\s*[零一二两三四五六七八九十百\d]+\s*周/.test(text);
+}
+
 /** “下周开始”是相对锚点，必须保留原句交给本地规则计算下周一。 */
 function hasRelativeWeeklyStart(text: string): boolean {
   return /(?:从|自)?\s*下(?:周|星期|礼拜)\s*(?:开始|起)/.test(text);
@@ -43,6 +48,7 @@ function needsOriginalDeterministicParse(input: string, result: ParseResult): bo
   if (hasTimeRange(input) && result.events.some((event) => event.time !== null && !event.endTime)) return true;
   if (hasExplicitBiweeklyRule(input) && result.events.length > 0 && result.events.some((event) => event.repeat !== "biweekly")) return true;
   if (hasExplicitWeeklyRule(input) && result.events.length > 0 && result.events.every((event) => event.repeat !== "weekly")) return true;
+  if (hasExplicitCustomWeekRule(input)) return true;
   if (hasWeeklyDuration(input)) return true;
   if (hasRelativeWeeklyStart(input)) return true;
   return false;

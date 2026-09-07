@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       note: typeof body.note === "string" && body.note ? body.note : null,
       repeat: typeof body.repeat === "string" && body.repeat ? body.repeat : null,
       repeatUntil: typeof body.repeatUntil === "string" && body.repeatUntil ? body.repeatUntil : null,
+      repeatConfig: typeof body.repeatConfig === "string" && body.repeatConfig ? body.repeatConfig : null,
       color: typeof body.color === "string" && body.color ? body.color : null,
       done: body.done === true,
       sourceText: typeof body.sourceText === "string" && body.sourceText ? body.sourceText : null,

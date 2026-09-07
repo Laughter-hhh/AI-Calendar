@@ -284,6 +284,56 @@ async function main() {
   r = await parse("八点半进行实验计划与果蝇收集");
   check("八点半进行… → 08:30 且标题干净", r.result.events?.[0]?.time === "08:30" && r.result.events?.[0]?.title === "实验计划与果蝇收集", JSON.stringify(r.result));
 
+  r = await parse("第一周、第三周、第六周、第七周下午三点开会");
+  const irregular = r.result.events?.[0];
+  const irregularConfig = irregular?.repeatConfig ? JSON.parse(irregular.repeatConfig) : {};
+  check(
+    "指定第1/3/6/7周 → weekly-custom 且保留周次",
+    r.result.events?.length === 1 &&
+      irregular?.title === "开会" &&
+      irregular?.time === "15:00" &&
+      irregular?.repeat === "weekly-custom" &&
+      JSON.stringify(irregularConfig.weekNumbers) === JSON.stringify([1, 3, 6, 7]),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("每月第1、3周周四晚上八点健身");
+  const monthlyCustom = r.result.events?.[0];
+  const monthlyConfig = monthlyCustom?.repeatConfig ? JSON.parse(monthlyCustom.repeatConfig) : {};
+  check(
+    "每月第1/3周周四 → weekly-custom 月内周次",
+    r.result.events?.length === 1 &&
+      monthlyCustom?.title === "健身" &&
+      monthlyCustom?.repeat === "weekly-custom" &&
+      monthlyConfig.monthWeekNumbers?.join(",") === "1,3",
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("每周四，除了第2周晚上八点值班");
+  const excludedWeek = r.result.events?.[0];
+  const excludedWeekConfig = excludedWeek?.repeatConfig ? JSON.parse(excludedWeek.repeatConfig) : {};
+  check(
+    "每周四排除第2周 → 标题干净且保留排除周次",
+    r.result.events?.length === 1 &&
+      excludedWeek?.title === "值班" &&
+      excludedWeek?.repeat === "weekly-custom" &&
+      excludedWeekConfig.excludeWeekNumbers?.join(",") === "2",
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("每周四，除了九月十号所在的那周晚上八点值班");
+  const excludedDateWeek = r.result.events?.[0];
+  const excludedDateConfig = excludedDateWeek?.repeatConfig ? JSON.parse(excludedDateWeek.repeatConfig) : {};
+  check(
+    "排除某日期所在的周 → 保存日期例外规则",
+    r.result.events?.length === 1 &&
+      excludedDateWeek?.title === "值班" &&
+      excludedDateWeek?.repeat === "weekly-custom" &&
+      excludedDateConfig.excludeDates?.length === 1 &&
+      excludedDateConfig.excludeDates[0] === new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear() + "-09-10",
+    JSON.stringify(r.result)
+  );
+
   if (failures.length === 0) {
     console.log("\n🎉 全部通过");
   } else {

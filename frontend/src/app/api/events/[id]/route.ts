@@ -36,6 +36,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       body.repeatUntil !== undefined
         ? (typeof body.repeatUntil === "string" && body.repeatUntil ? body.repeatUntil : null)
         : undefined,
+    repeatConfig:
+      body.repeatConfig !== undefined
+        ? (typeof body.repeatConfig === "string" && body.repeatConfig ? body.repeatConfig : null)
+        : undefined,
     color: body.color !== undefined ? (typeof body.color === "string" && body.color ? body.color : null) : undefined,
     done: body.done !== undefined ? body.done === true : undefined,
   };

@@ -13,6 +13,7 @@ function repeatLabel(r?: string | null): string {
   if (r === "weekly") return "每周";
   if (r === "biweekly") return "每两周";
   if (r === "monthly") return "每月";
+  if (r === "weekly-custom") return "自定义周次";
   return r ?? "";
 }
 

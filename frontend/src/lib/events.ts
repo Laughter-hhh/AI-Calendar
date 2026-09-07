@@ -472,17 +472,56 @@ export function deleteSingleOccurrence(
   eventId: number,
   date: string
 ): { ok: boolean; mode: "exception" | "deleted" | "not_found" } {
+  const result = deleteOccurrences(userId, eventId, [date]);
+  if (!result.ok) return { ok: false, mode: "not_found" };
+  return { ok: true, mode: result.exceptions > 0 ? "exception" : "deleted" };
+}
+
+/** 批量删除重复系列中的多个发生日期，同时保留系列和未选中的日期。 */
+export function deleteOccurrences(
+  userId: number,
+  eventId: number,
+  dates: string[]
+): { ok: boolean; deleted: number; exceptions: number } {
   const db = getDb();
   const ev = db
     .prepare("SELECT * FROM events WHERE id = ? AND user_id = ?")
     .get(eventId, userId) as Record<string, unknown> | undefined;
-  if (!ev) return { ok: false, mode: "not_found" };
+  if (!ev) return { ok: false, deleted: 0, exceptions: 0 };
 
-  // 只有"重复事件的基础日期之后"才记例外；基础日当天或非重复事件直接删
-  if (ev.repeat && String(ev.event_date) !== date && date > String(ev.event_date)) {
-    db.prepare("INSERT OR IGNORE INTO event_exceptions (event_id, date) VALUES (?, ?)").run(eventId, date);
-    return { ok: true, mode: "exception" };
+  const uniqueDates = [...new Set(dates)].sort();
+  if (uniqueDates.length === 0) return { ok: true, deleted: 0, exceptions: 0 };
+  const repeat = ev.repeat === null ? null : String(ev.repeat);
+  const baseDate = String(ev.event_date);
+
+  if (!repeat) {
+    if (!uniqueDates.includes(baseDate)) return { ok: true, deleted: 0, exceptions: 0 };
+    const info = db.prepare("DELETE FROM events WHERE id = ? AND user_id = ?").run(eventId, userId);
+    return { ok: true, deleted: info.changes > 0 ? 1 : 0, exceptions: 0 };
   }
-  db.prepare("DELETE FROM events WHERE id = ? AND user_id = ?").run(eventId, userId);
-  return { ok: true, mode: "deleted" };
+
+  let deleted = 0;
+  let exceptions = 0;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const date of uniqueDates) {
+      if (date < baseDate || (ev.repeat_until !== null && date > String(ev.repeat_until)) || !occursOn(baseDate, repeat, date)) {
+        continue;
+      }
+      // 如果该周曾被“仅本次编辑”复制成独立事件，连同副本一起移除。
+      const child = db
+        .prepare("DELETE FROM events WHERE user_id = ? AND series_id = ? AND event_date = ?")
+        .run(userId, eventId, date);
+      deleted += Number(child.changes);
+      const exception = db
+        .prepare("INSERT OR IGNORE INTO event_exceptions (event_id, date) VALUES (?, ?)")
+        .run(eventId, date);
+      exceptions += Number(exception.changes);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+  return { ok: true, deleted, exceptions };
 }

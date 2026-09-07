@@ -138,6 +138,18 @@ async function main() {
   check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
   check("日视图包含事项/时间线切换", datePage.text.includes(">事项<") && datePage.text.includes(">时间线<"));
   check("重复日程编辑提供范围选择入口", eventListSource.includes("仅本次") && eventListSource.includes("整个系列"));
+  check(
+    "事项可手动切换单日或每周",
+    eventListSource.includes("重复方式") &&
+      eventListSource.includes("单日（仅一次）") &&
+      eventListSource.includes('"weekly"')
+  );
+  check(
+    "重复系列支持选择多个日期删除",
+    eventListSource.includes("选择日期删除") &&
+      eventListSource.includes('mode: "multiple"') &&
+      eventListSource.includes("dates: batchDates")
+  );
 
   const weekPage = await api(`/?date=${tomorrow}&view=week`);
   check("时间安排页返回 200 且含标题与时间刻度", weekPage.status === 200 && weekPage.text.includes("时间安排") && weekPage.text.includes("6:00"), `status=${weekPage.status}`);

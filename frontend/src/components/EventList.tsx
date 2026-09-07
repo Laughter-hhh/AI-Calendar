@@ -21,6 +21,7 @@ interface Draft {
   endTime: string;
   note: string;
   color: string;
+  repeat: string;
 }
 
 export default function EventList({
@@ -40,6 +41,9 @@ export default function EventList({
   const [editOccurrenceDate, setEditOccurrenceDate] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [actionId, setActionId] = useState<number | null>(null);
+  const [batchDeleteId, setBatchDeleteId] = useState<number | null>(null);
+  const [batchDate, setBatchDate] = useState("");
+  const [batchDates, setBatchDates] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [conflictNotice, setConflictNotice] = useState("");
@@ -50,6 +54,7 @@ export default function EventList({
     endTime: "",
     note: "",
     color: "",
+    repeat: "none",
   });
 
   const visible = events.filter(
@@ -69,6 +74,48 @@ export default function EventList({
     await fetch(`/api/events/${event.id}?mode=single&date=${event.date}`, { method: "DELETE" });
     setActionId(null);
     await onRefresh();
+  }
+
+  function openBatchDelete(event: CalendarEvent) {
+    setBatchDeleteId(event.id);
+    setBatchDates([event.date]);
+    setBatchDate(event.date);
+  }
+
+  function addBatchDate() {
+    if (!batchDate || batchDates.includes(batchDate)) return;
+    setBatchDates([...batchDates, batchDate].sort());
+  }
+
+  async function removeSelectedOccurrences(event: CalendarEvent) {
+    if (batchDates.length === 0) return;
+    if (!window.confirm("确定删除 " + batchDates.length + " 个选定日期吗？未选中的系列日程会保留。")) return;
+    const url = "/api/events/" + event.id;
+    const body = { mode: "multiple", dates: batchDates };
+    try {
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setConflictNotice(result.error ?? "批量删除失败，请重试");
+        return;
+      }
+      setBatchDeleteId(null);
+      setBatchDates([]);
+      setBatchDate("");
+      setActionId(null);
+      await onRefresh();
+    } catch {
+      enqueueMutation({ url, method: "DELETE", body });
+      setBatchDeleteId(null);
+      setBatchDates([]);
+      setBatchDate("");
+      setActionId(null);
+      setConflictNotice("当前离线：选定日期已暂存删除，联网后会自动同步。");
+    }
   }
 
   async function toggleDone(event: CalendarEvent) {
@@ -95,6 +142,7 @@ export default function EventList({
       endTime: event.endTime ?? "",
       note: event.note ?? "",
       color: event.color ?? "",
+      repeat: event.repeat ?? "none",
     });
   }
 
@@ -122,6 +170,8 @@ export default function EventList({
       endTime: draft.endTime || null,
       note: draft.note.trim() || null,
       color: draft.color || null,
+      repeat: editScope === "series" ? (draft.repeat === "none" ? null : draft.repeat) : undefined,
+      repeatUntil: editScope === "series" && draft.repeat === "none" ? null : undefined,
       mode: editScope,
       occurrenceDate: editOccurrenceDate,
     };
@@ -187,6 +237,11 @@ export default function EventList({
 
   const timed = visible.filter((event) => event.startTime !== null);
   const todos = visible.filter((event) => event.startTime === null);
+  const repeatChoices = [
+    "none",
+    "weekly",
+    ...(draft.repeat !== "none" && draft.repeat !== "weekly" ? [draft.repeat] : []),
+  ];
 
   const renderItem = (event: CalendarEvent) => (
     <li key={event.id} className="ui-card px-4 py-3 transition-shadow hover:shadow-md md:px-5 md:py-4">
@@ -200,7 +255,7 @@ export default function EventList({
               className="ui-input w-full px-3 text-sm"
             />
           </label>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-4">
             <label>
               <span className="mb-1 block text-xs text-zinc-500">日期</span>
               <input
@@ -237,6 +292,22 @@ export default function EventList({
                 onChange={(e) => setDraft({ ...draft, endTime: e.target.value })}
                 className="ui-input w-full px-3 text-sm disabled:bg-slate-100 disabled:text-zinc-400"
               />
+            </label>
+            <label>
+              <span className="mb-1 block text-xs text-zinc-500">重复方式</span>
+              <select
+                value={draft.repeat}
+                disabled={editScope === "single"}
+                onChange={(e) => setDraft({ ...draft, repeat: e.target.value })}
+                className="ui-input w-full px-3 text-sm disabled:bg-slate-100 disabled:text-zinc-400"
+              >
+                {repeatChoices.map((value) => (
+                  <option key={value} value={value}>
+                    {value === "none" ? "单日（仅一次）" : repeatLabel(value)}
+                  </option>
+                ))}
+              </select>
+              {editScope === "single" && <span className="mt-1 block text-[11px] text-zinc-400">仅本次编辑不会改变系列</span>}
             </label>
           </div>
           <div className="grid gap-2 sm:grid-cols-[1fr_9rem]">
@@ -387,12 +458,69 @@ export default function EventList({
                   仅删此日
                 </button>
               )}
+              {event.repeat && (
+                <button
+                  onClick={() => openBatchDelete(event)}
+                  className="h-9 rounded-lg border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                >
+                  选择日期删除
+                </button>
+              )}
               <button
                 onClick={() => removeSeries(event)}
                 className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100"
               >
                 {event.repeat ? "删除整个系列" : "删除"}
               </button>
+            </div>
+          )}
+
+          {batchDeleteId === event.id && event.repeat && !event.ownerEmail && (
+            <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50/70 p-3">
+              <p className="text-xs font-semibold text-amber-900/80">选择要删除的发生日期</p>
+              <p className="mt-1 text-[11px] text-amber-900/60">只删除选中的周次，其他重复日程会继续保留。</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  type="date"
+                  value={batchDate}
+                  onChange={(e) => setBatchDate(e.target.value)}
+                  className="ui-input h-9 px-2 text-xs"
+                />
+                <button onClick={addBatchDate} className="ui-button-secondary h-9 px-3 text-xs">
+                  加入日期
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {batchDates.map((date) => (
+                  <button
+                    key={date}
+                    onClick={() => setBatchDates(batchDates.filter((item) => item !== date))}
+                    className="rounded-full bg-white px-2.5 py-1 text-[11px] text-amber-800 shadow-sm"
+                    title="移除这个日期"
+                  >
+                    {date} ×
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setBatchDeleteId(null);
+                    setBatchDates([]);
+                    setBatchDate("");
+                  }}
+                  className="ui-button-ghost h-9 px-3 text-xs"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => removeSelectedOccurrences(event)}
+                  disabled={batchDates.length === 0}
+                  className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  删除选定日期
+                </button>
+              </div>
             </div>
           )}
 

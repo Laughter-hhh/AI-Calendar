@@ -261,6 +261,34 @@ async function main() {
     JSON.stringify(afterSeriesDelete.data)
   );
 
+  const batchRepeat = await api("/api/events", {
+    method: "POST",
+    body: {
+      title: "批量删除周次基线",
+      date: "2026-09-07",
+      time: "10:00",
+      endTime: "11:00",
+      repeat: "weekly",
+    },
+  });
+  const batchRepeatId = batchRepeat.data?.event?.id;
+  const batchDeleted = await api("/api/events/" + batchRepeatId, {
+    method: "DELETE",
+    body: { mode: "multiple", dates: ["2026-09-07", "2026-09-21"] },
+  });
+  const batchBaseDate = await api("/api/events?date=2026-09-07");
+  const batchKeepDate = await api("/api/events?date=2026-09-14");
+  const batchRemovedDate = await api("/api/events?date=2026-09-21");
+  check(
+    "批量删除指定周次并保留其他周次",
+    batchDeleted.status === 200 &&
+      !batchBaseDate.data?.events?.some((event) => event.id === batchRepeatId) &&
+      batchKeepDate.data?.events?.some((event) => event.id === batchRepeatId) &&
+      !batchRemovedDate.data?.events?.some((event) => event.id === batchRepeatId),
+    JSON.stringify({ batchDeleted: batchDeleted.data, base: batchBaseDate.data, keep: batchKeepDate.data, removed: batchRemovedDate.data })
+  );
+  if (batchRepeatId) await api("/api/events/" + batchRepeatId, { method: "DELETE" });
+
   const compatibilityIcs = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

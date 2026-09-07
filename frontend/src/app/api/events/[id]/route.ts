@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { deleteEvent, deleteSingleOccurrence, findEventConflicts, updateEvent, updateSingleOccurrence } from "@/lib/events";
+import { deleteEvent, deleteOccurrences, deleteSingleOccurrence, findEventConflicts, updateEvent, updateSingleOccurrence } from "@/lib/events";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { EventValidationError } from "@/lib/event-validation";
 import { isValidDateStr } from "@/lib/date";
@@ -69,6 +69,20 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("mode");
   const date = url.searchParams.get("date");
+  const body = await request.json().catch(() => ({}));
+  if (body.mode === "multiple" && Array.isArray(body.dates)) {
+    const dates = [
+      ...new Set<string>(
+        (body.dates as unknown[]).filter(
+          (value: unknown): value is string => typeof value === "string" && isValidDateStr(value)
+        )
+      ),
+    ];
+    if (dates.length === 0) return NextResponse.json({ error: "请选择至少一个有效日期" }, { status: 400 });
+    const result = deleteOccurrences(user.id, eventId, dates);
+    if (!result.ok) return NextResponse.json({ error: "事件不存在" }, { status: 404 });
+    return NextResponse.json({ ok: true, mode: "multiple", deleted: result.deleted, exceptions: result.exceptions });
+  }
   if (mode === "single" && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
     const result = deleteSingleOccurrence(user.id, eventId, date);
     if (!result.ok) return NextResponse.json({ error: "事件不存在" }, { status: 404 });

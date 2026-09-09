@@ -9,6 +9,17 @@ CREATE TABLE IF NOT EXISTS users (
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- 日历表：同一账号可拥有多个相互隔离的日历
+CREATE TABLE IF NOT EXISTS calendars (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  color      TEXT NOT NULL DEFAULT 'blue',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_calendars_user ON calendars(user_id, id);
+
 -- 会话表：登录后发放随机 token，保存在浏览器 Cookie 中
 CREATE TABLE IF NOT EXISTS sessions (
   token      TEXT PRIMARY KEY,
@@ -21,6 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE TABLE IF NOT EXISTS events (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  calendar_id INTEGER REFERENCES calendars(id) ON DELETE CASCADE,
   title       TEXT NOT NULL,
   event_date  TEXT NOT NULL,   -- YYYY-MM-DD
   start_time  TEXT,            -- HH:mm，NULL 表示全天事件
@@ -68,6 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id, done, created_at);
 CREATE TABLE IF NOT EXISTS calendar_marks (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  calendar_id INTEGER REFERENCES calendars(id) ON DELETE CASCADE,
   mark_date  TEXT NOT NULL,
   title      TEXT NOT NULL,
   type       TEXT NOT NULL DEFAULT 'custom',

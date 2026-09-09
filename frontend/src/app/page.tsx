@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import { listEvents, listEventsRange } from "@/lib/events";
+import { listCalendars } from "@/lib/calendars";
+import type { CalendarInfo } from "@/lib/calendars";
 import type { CalendarEvent } from "@/lib/events";
 import AuthCard from "@/components/AuthCard";
 import ScheduleArea from "@/components/ScheduleArea";
@@ -12,7 +14,7 @@ type View = "day" | "week" | "month";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; view?: string; q?: string }>;
+    searchParams: Promise<{ date?: string; view?: string; q?: string; calendarId?: string }>;
 }) {
   const store = await cookies();
   const user = getSessionUser(store.get(SESSION_COOKIE)?.value);
@@ -39,15 +41,20 @@ export default async function Home({
   const selected = typeof params.date === "string" && isValidDateStr(params.date) ? params.date : today;
   const view: View = params.view === "week" ? "week" : params.view === "month" ? "month" : "day";
   const query = typeof params.q === "string" ? params.q.trim() : "";
+  const calendars: CalendarInfo[] = listCalendars(user.id);
+  const requestedCalendarId = Number(params.calendarId);
+  const initialCalendarId = calendars.some((calendar) => calendar.id === requestedCalendarId)
+    ? requestedCalendarId
+    : calendars[0].id;
   const currentTime = currentTimeStr();
 
   let events: CalendarEvent[];
   if (view === "week") {
-    events = listEventsRange(user.id, selected, shiftDate(selected, 6));
+    events = listEventsRange(user.id, selected, shiftDate(selected, 6), initialCalendarId);
   } else if (view === "month") {
-    events = listEventsRange(user.id, shiftMonth(selected, 0), shiftDate(shiftMonth(selected, 1), -1));
+    events = listEventsRange(user.id, shiftMonth(selected, 0), shiftDate(shiftMonth(selected, 1), -1), initialCalendarId);
   } else {
-    events = listEvents(user.id, selected);
+    events = listEvents(user.id, selected, initialCalendarId);
   }
 
   return (
@@ -60,6 +67,8 @@ export default async function Home({
         initialEvents={events}
         initialCurrentTime={currentTime}
         userId={user.id}
+        initialCalendars={calendars}
+        initialCalendarId={initialCalendarId}
       />
 
       <AiInput />

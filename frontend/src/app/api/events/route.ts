@@ -13,6 +13,15 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
+  const rawCalendarId = url.searchParams.get("calendarId");
+  let calendarId: number | undefined;
+  if (rawCalendarId !== null) {
+    const parsedCalendarId = Number(rawCalendarId);
+    if (!Number.isInteger(parsedCalendarId) || parsedCalendarId <= 0) {
+      return NextResponse.json({ error: "日历参数不正确" }, { status: 400 });
+    }
+    calendarId = parsedCalendarId;
+  }
   // 区间查询：GET /api/events?from=YYYY-MM-DD&to=YYYY-MM-DD（周视图等使用）
   if (from || to) {
     if (
@@ -24,10 +33,10 @@ export async function GET(request: Request) {
     ) {
       return NextResponse.json({ error: "日期区间参数不正确" }, { status: 400 });
     }
-    return NextResponse.json({ events: listEventsRange(user.id, from, to) });
+    return NextResponse.json({ events: listEventsRange(user.id, from, to, calendarId) });
   }
   const date = url.searchParams.get("date") ?? todayStr();
-  return NextResponse.json({ events: listEvents(user.id, date) });
+  return NextResponse.json({ events: listEvents(user.id, date, calendarId) });
 }
 
 export async function POST(request: Request) {
@@ -46,6 +55,7 @@ export async function POST(request: Request) {
     const event = createEvent(user.id, {
       title,
       date,
+      calendarId: typeof body.calendarId === "number" ? body.calendarId : undefined,
       time: typeof body.time === "string" && body.time ? body.time : null,
       endTime: typeof body.endTime === "string" && body.endTime ? body.endTime : null,
       note: typeof body.note === "string" && body.note ? body.note : null,
@@ -56,7 +66,7 @@ export async function POST(request: Request) {
       done: body.done === true,
       sourceText: typeof body.sourceText === "string" && body.sourceText ? body.sourceText : null,
     });
-    const conflicts = findEventConflicts(user.id, event.date, event.startTime, event.endTime, event.id);
+    const conflicts = findEventConflicts(user.id, event.date, event.startTime, event.endTime, event.id, event.calendarId);
     return NextResponse.json({ event, conflicts }, { status: 201 });
   } catch (error) {
     if (error instanceof EventValidationError) {

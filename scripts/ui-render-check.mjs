@@ -144,6 +144,7 @@ async function main() {
       datePage.text.includes(">月<")
   );
   check("日期页提供手动添加日程入口", datePage.text.includes("手动添加日程") && datePage.text.includes("添加"));
+  check("日期页提供多日历切换与管理入口", datePage.text.includes("当前日历") && datePage.text.includes("切换日历") && datePage.text.includes("管理"));
   check("日程行包含完成勾选框", datePage.text.includes('type="checkbox"'));
   check("日视图包含事项/时间线切换", datePage.text.includes(">事项<") && datePage.text.includes(">时间线<"));
   check("重复日程编辑提供范围选择入口", eventListSource.includes("仅本次") && eventListSource.includes("整个系列"));

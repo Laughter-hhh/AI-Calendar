@@ -32,7 +32,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "未找到日历事件，请选择有效的 .ics 文件" }, { status: 400 });
   }
 
-  const existing = existingExternalUids(user.id, parsed.events.map((event) => event.externalUid));
+  const selectedCalendarId = typeof body.calendarId === "number" ? body.calendarId : undefined;
+  const existing = existingExternalUids(user.id, parsed.events.map((event) => event.externalUid), selectedCalendarId);
   const ready = parsed.events.filter((event) => !existing.has(event.externalUid));
   const baseDuplicates = parsed.duplicatesInFile + existing.size;
   const common = {
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const result = importEvents(user.id, ready);
+  const result = importEvents(user.id, ready.map((event) => ({ ...event, calendarId: selectedCalendarId })));
   return NextResponse.json({
     ...common,
     imported: result.imported,

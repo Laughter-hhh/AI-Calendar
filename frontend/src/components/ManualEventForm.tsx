@@ -14,10 +14,12 @@ function repeatLabel(value: string): string {
 
 export default function ManualEventForm({
   initialDate,
+  calendarId,
   onClose,
   onSaved,
 }: {
   initialDate: string;
+  calendarId: number;
   onClose: () => void;
   onSaved: (message: string) => Promise<void>;
 }) {
@@ -53,6 +55,7 @@ export default function ManualEventForm({
       return;
     }
     const payload = {
+      calendarId,
       title: cleanTitle,
       date,
       time: time || null,

@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { isValidDateStr } from "./date";
 import type { CalendarMark, CalendarMarkType, NewCalendarMark } from "./calendar-mark-types";
+import { getCalendar, listCalendars } from "./calendars";
 export type { CalendarMark, CalendarMarkType, NewCalendarMark } from "./calendar-mark-types";
 
 function mapRow(row: Record<string, unknown>): CalendarMark {
@@ -8,6 +9,7 @@ function mapRow(row: Record<string, unknown>): CalendarMark {
   const type: CalendarMarkType = rawType === "holiday" || rawType === "anniversary" ? rawType : "custom";
   return {
     id: Number(row.id),
+    calendarId: Number(row.calendar_id ?? 0),
     date: String(row.mark_date),
     title: String(row.title),
     type,
@@ -27,21 +29,32 @@ function validateMark(data: NewCalendarMark): { date: string; title: string; typ
   return { date, title, type, note };
 }
 
-export function listCalendarMarks(userId: number, from: string, to: string): CalendarMark[] {
+function resolveCalendarId(userId: number, requested?: number | null): number {
+  const calendars = listCalendars(userId);
+  if (requested !== undefined && requested !== null) {
+    if (!getCalendar(userId, requested)) throw new Error("日历不存在或无权使用");
+    return requested;
+  }
+  return calendars[0].id;
+}
+
+export function listCalendarMarks(userId: number, from: string, to: string, calendarId?: number): CalendarMark[] {
   if (!isValidDateStr(from) || !isValidDateStr(to) || from > to) return [];
   const rows = getDb()
-    .prepare("SELECT * FROM calendar_marks WHERE user_id = ? AND mark_date BETWEEN ? AND ? ORDER BY mark_date, title, id")
-    .all(userId, from, to) as unknown as Record<string, unknown>[];
+    .prepare(calendarId === undefined ? "SELECT * FROM calendar_marks WHERE user_id = ? AND mark_date BETWEEN ? AND ? ORDER BY mark_date, title, id" : "SELECT * FROM calendar_marks WHERE user_id = ? AND calendar_id = ? AND mark_date BETWEEN ? AND ? ORDER BY mark_date, title, id")
+    .all(...(calendarId === undefined ? [userId, from, to] : [userId, calendarId, from, to])) as unknown as Record<string, unknown>[];
   return rows.map(mapRow);
 }
 
 export function createCalendarMark(userId: number, data: NewCalendarMark): CalendarMark {
   const mark = validateMark(data);
+  const calendarId = resolveCalendarId(userId, data.calendarId);
   const result = getDb()
-    .prepare("INSERT INTO calendar_marks (user_id, mark_date, title, type, note, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
-    .run(userId, mark.date, mark.title, mark.type, mark.note);
+    .prepare("INSERT INTO calendar_marks (user_id, calendar_id, mark_date, title, type, note, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))")
+    .run(userId, calendarId, mark.date, mark.title, mark.type, mark.note);
   return {
     id: Number(result.lastInsertRowid),
+    calendarId,
     date: mark.date,
     title: mark.title,
     type: mark.type,
@@ -60,8 +73,9 @@ export function updateCalendarMark(userId: number, id: number, data: Partial<New
     type: data.type ?? (String(existing.type) as CalendarMarkType),
     note: data.note !== undefined ? data.note : (existing.note === null ? null : String(existing.note)),
   });
-  db.prepare("UPDATE calendar_marks SET mark_date = ?, title = ?, type = ?, note = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?")
-    .run(merged.date, merged.title, merged.type, merged.note, id, userId);
+  const calendarId = data.calendarId !== undefined && data.calendarId !== null ? resolveCalendarId(userId, data.calendarId) : Number(existing.calendar_id);
+  db.prepare("UPDATE calendar_marks SET calendar_id = ?, mark_date = ?, title = ?, type = ?, note = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?")
+    .run(calendarId, merged.date, merged.title, merged.type, merged.note, id, userId);
   const row = db.prepare("SELECT * FROM calendar_marks WHERE id = ? AND user_id = ?").get(id, userId) as Record<string, unknown>;
   return mapRow(row);
 }

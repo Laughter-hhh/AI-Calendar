@@ -53,6 +53,25 @@ async function main() {
   });
   check("注册隔离测试账号", register.status === 200);
 
+  const calendarsBefore = await api("/api/calendars");
+  const defaultCalendarId = calendarsBefore.data?.calendars?.[0]?.id;
+  const createdCalendar = await api("/api/calendars", { method: "POST", body: { name: "家人日历", color: "green" } });
+  const familyCalendarId = createdCalendar.data?.calendar?.id;
+  check("同一账号可创建多个日历", calendarsBefore.status === 200 && defaultCalendarId && createdCalendar.status === 201 && familyCalendarId && familyCalendarId !== defaultCalendarId, JSON.stringify({ before: calendarsBefore.data, created: createdCalendar.data }));
+  const personalEvent = await api("/api/events", { method: "POST", body: { calendarId: defaultCalendarId, title: "个人日程隔离样本", date: "2026-09-03", time: "09:00" } });
+  const familyEvent = await api("/api/events", { method: "POST", body: { calendarId: familyCalendarId, title: "家人日程隔离样本", date: "2026-09-03", time: "10:00" } });
+  const familyList = await api("/api/events?date=2026-09-03&calendarId=" + familyCalendarId);
+  const personalList = await api("/api/events?date=2026-09-03&calendarId=" + defaultCalendarId);
+  check("切换日历时日程互不混入", personalEvent.status === 201 && familyEvent.status === 201 && familyList.data?.events?.some((event) => event.title === "家人日程隔离样本") && !familyList.data?.events?.some((event) => event.title === "个人日程隔离样本") && personalList.data?.events?.some((event) => event.title === "个人日程隔离样本") && !personalList.data?.events?.some((event) => event.title === "家人日程隔离样本"));
+  const personalMark = await api("/api/calendar-marks", { method: "POST", body: { calendarId: defaultCalendarId, date: "2026-09-03", title: "个人纪念日隔离样本", type: "anniversary" } });
+  const familyMark = await api("/api/calendar-marks", { method: "POST", body: { calendarId: familyCalendarId, date: "2026-09-03", title: "家人纪念日隔离样本", type: "anniversary" } });
+  const familyMarks = await api("/api/calendar-marks?from=2026-09-01&to=2026-09-30&calendarId=" + familyCalendarId);
+  check("切换日历时纪念日标记互不混入", personalMark.status === 201 && familyMark.status === 201 && familyMarks.data?.marks?.some((mark) => mark.title === "家人纪念日隔离样本") && !familyMarks.data?.marks?.some((mark) => mark.title === "个人纪念日隔离样本"));
+  const renamedCalendar = await api(`/api/calendars/${familyCalendarId}`, { method: "PATCH", body: { name: "家庭日历" } });
+  check("日历可重命名", renamedCalendar.status === 200 && renamedCalendar.data?.calendar?.name === "家庭日历");
+  const removedCalendar = await api(`/api/calendars/${familyCalendarId}`, { method: "DELETE" });
+  check("多余日历可删除", removedCalendar.status === 200 && removedCalendar.data?.ok === true);
+
   const createdMark = await api("/api/calendar-marks", {
     method: "POST",
     body: { date: "2026-09-10", title: "实验室纪念日", type: "anniversary", note: "双月视图回归样本" },

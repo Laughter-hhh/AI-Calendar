@@ -4,6 +4,7 @@ export type CalendarMarkType = "holiday" | "anniversary" | "custom";
 
 export interface CalendarMark {
   id: number;
+  calendarId: number;
   date: string;
   title: string;
   type: CalendarMarkType;
@@ -12,6 +13,7 @@ export interface CalendarMark {
 }
 
 export interface NewCalendarMark {
+  calendarId?: number | null;
   date: string;
   title: string;
   type?: CalendarMarkType;

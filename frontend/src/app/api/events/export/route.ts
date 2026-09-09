@@ -31,24 +31,24 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
+  const rawCalendarId = url.searchParams.get("calendarId");
+  let calendarId: number | undefined;
+  if (rawCalendarId !== null) {
+    const parsedCalendarId = Number(rawCalendarId);
+    if (!Number.isInteger(parsedCalendarId) || parsedCalendarId <= 0) return NextResponse.json({ error: "日历参数不正确" }, { status: 400 });
+    calendarId = parsedCalendarId;
+  }
   if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
     return NextResponse.json({ error: "日期区间参数不正确" }, { status: 400 });
   }
 
   const db = getDb();
   const single = db
-    .prepare(
-      `SELECT * FROM events
-       WHERE user_id = ? AND repeat IS NULL AND event_date BETWEEN ? AND ?`
-    )
-    .all(user.id, from, to) as unknown as Array<Record<string, unknown>>;
+    .prepare(calendarId === undefined ? `SELECT * FROM events WHERE user_id = ? AND repeat IS NULL AND event_date BETWEEN ? AND ?` : `SELECT * FROM events WHERE user_id = ? AND calendar_id = ? AND repeat IS NULL AND event_date BETWEEN ? AND ?`)
+    .all(...(calendarId === undefined ? [user.id, from, to] : [user.id, calendarId, from, to])) as unknown as Array<Record<string, unknown>>;
   const recurring = db
-    .prepare(
-      `SELECT * FROM events
-       WHERE user_id = ? AND repeat IS NOT NULL AND event_date <= ?
-         AND (repeat_until IS NULL OR repeat_until >= ?)`
-    )
-    .all(user.id, to, from) as unknown as Array<Record<string, unknown>>;
+    .prepare(calendarId === undefined ? `SELECT * FROM events WHERE user_id = ? AND repeat IS NOT NULL AND event_date <= ? AND (repeat_until IS NULL OR repeat_until >= ?)` : `SELECT * FROM events WHERE user_id = ? AND calendar_id = ? AND repeat IS NOT NULL AND event_date <= ? AND (repeat_until IS NULL OR repeat_until >= ?)`)
+    .all(...(calendarId === undefined ? [user.id, to, from] : [user.id, calendarId, to, from])) as unknown as Array<Record<string, unknown>>;
 
   const exceptions = new Map<number, string[]>();
   const exRows = db

@@ -19,10 +19,19 @@ export async function GET(request: Request) {
   const fallback = currentMonthRange();
   const from = url.searchParams.get("from") ?? fallback.from;
   const to = url.searchParams.get("to") ?? fallback.to;
+  const rawCalendarId = url.searchParams.get("calendarId");
+  let calendarId: number | undefined;
+  if (rawCalendarId !== null) {
+    const parsedCalendarId = Number(rawCalendarId);
+    if (!Number.isInteger(parsedCalendarId) || parsedCalendarId <= 0) {
+      return NextResponse.json({ error: "日历参数不正确" }, { status: 400 });
+    }
+    calendarId = parsedCalendarId;
+  }
   if (!isValidDateStr(from) || !isValidDateStr(to) || from > to) {
     return NextResponse.json({ error: "日期范围不正确" }, { status: 400 });
   }
-  return NextResponse.json({ marks: listCalendarMarks(user.id, from, to) });
+  return NextResponse.json({ marks: listCalendarMarks(user.id, from, to, calendarId) });
 }
 
 export async function POST(request: Request) {
@@ -33,6 +42,7 @@ export async function POST(request: Request) {
   try {
     const mark = createCalendarMark(user.id, {
       date: typeof body.date === "string" ? body.date : "",
+      calendarId: typeof body.calendarId === "number" ? body.calendarId : undefined,
       title: typeof body.title === "string" ? body.title : "",
       type: body.type as CalendarMarkType | undefined,
       note: body.note == null ? null : String(body.note),

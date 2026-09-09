@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 
-export default function ExportButton({ from, to }: { from: string; to: string }) {
+export default function ExportButton({ from, to, calendarId }: { from: string; to: string; calendarId?: number }) {
   const [busy, setBusy] = useState(false);
 
   async function download() {
     setBusy(true);
     try {
-      const res = await fetch(`/api/events/export?from=${from}&to=${to}`);
+      const suffix = calendarId ? `&calendarId=${calendarId}` : "";
+      const res = await fetch(`/api/events/export?from=${from}&to=${to}${suffix}`);
       if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

@@ -25,6 +25,15 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS calendars (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  color      TEXT NOT NULL DEFAULT 'blue',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_calendars_user ON calendars(user_id, id);
 CREATE TABLE IF NOT EXISTS sessions (
   token      TEXT PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -34,6 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE TABLE IF NOT EXISTS events (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  calendar_id INTEGER REFERENCES calendars(id) ON DELETE CASCADE,
   title       TEXT NOT NULL,
   event_date  TEXT NOT NULL,
   start_time  TEXT,
@@ -72,6 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id, done, created_at);
 CREATE TABLE IF NOT EXISTS calendar_marks (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  calendar_id INTEGER REFERENCES calendars(id) ON DELETE CASCADE,
   mark_date  TEXT NOT NULL,
   title      TEXT NOT NULL,
   type       TEXT NOT NULL DEFAULT 'custom',
@@ -125,6 +136,36 @@ function ensureCalendarMarksTable(db: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_calendar_marks_user_date ON calendar_marks(user_id, mark_date);
   `);
+  const cols = db.prepare("PRAGMA table_info(calendar_marks)").all() as Array<{ name: string }>;
+  if (!cols.some((col) => col.name === "calendar_id")) {
+    db.exec("ALTER TABLE calendar_marks ADD COLUMN calendar_id INTEGER REFERENCES calendars(id)");
+  }
+}
+
+/** 兼容已有账号：建立默认日历，并把历史日程/标记归入默认日历。 */
+function ensureCalendars(db: DatabaseSync): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS calendars (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT 'blue',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_calendars_user ON calendars(user_id, id);
+  `);
+  const eventCols = db.prepare("PRAGMA table_info(events)").all() as Array<{ name: string }>;
+  if (!eventCols.some((col) => col.name === "calendar_id")) {
+    db.exec("ALTER TABLE events ADD COLUMN calendar_id INTEGER REFERENCES calendars(id)");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_events_user_calendar_date ON events(user_id, calendar_id, event_date)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_calendar_marks_user_calendar_date ON calendar_marks(user_id, calendar_id, mark_date)");
+  const users = db.prepare("SELECT id FROM users").all() as Array<{ id: number }>;
+  const insertDefault = db.prepare("INSERT INTO calendars (user_id, name, color) SELECT ?, '我的日历', 'blue' WHERE NOT EXISTS (SELECT 1 FROM calendars WHERE user_id = ?)");
+  for (const user of users) insertDefault.run(Number(user.id), Number(user.id));
+  db.exec("UPDATE events SET calendar_id = (SELECT id FROM calendars WHERE calendars.user_id = events.user_id ORDER BY id LIMIT 1) WHERE calendar_id IS NULL");
+  db.exec("UPDATE calendar_marks SET calendar_id = (SELECT id FROM calendars WHERE calendars.user_id = calendar_marks.user_id ORDER BY id LIMIT 1) WHERE calendar_id IS NULL");
 }
 
 export function getDb(): DatabaseSync {
@@ -146,7 +187,9 @@ export function getDb(): DatabaseSync {
     connection.exec(schema);
     ensureEventsColumns(connection);
     ensureCalendarMarksTable(connection);
-    connection.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_user_external_uid ON events(user_id, external_uid)");
+    ensureCalendars(connection);
+    connection.exec("DROP INDEX IF EXISTS idx_events_user_external_uid");
+    connection.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_user_calendar_external_uid ON events(user_id, calendar_id, external_uid)");
     connection.exec("PRAGMA journal_mode = WAL;");
     connection.exec("PRAGMA foreign_keys = ON;");
     db = connection;

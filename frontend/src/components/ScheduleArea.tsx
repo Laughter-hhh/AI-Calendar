@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
 import type { CalendarMark, NewCalendarMark } from "@/lib/calendar-mark-types";
+import type { CalendarInfo } from "@/lib/calendars";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
 import { cacheSet, fetchCachedJson, isOnline, setOfflineUserId } from "@/lib/offline";
@@ -15,6 +16,7 @@ import ImportButton from "./ImportButton";
 import DayTimelineView from "./DayTimelineView";
 import CalendarMonthView from "./CalendarMonthView";
 import ManualEventForm from "./ManualEventForm";
+import CalendarSwitcher from "./CalendarSwitcher";
 
 const WeekView = dynamic(() => import("./WeekView"), { ssr: true });
 const MonthView = dynamic(() => import("./MonthView"), { ssr: true });
@@ -38,19 +40,21 @@ function getServerNetworkOffline(): boolean {
   return false;
 }
 
-function buildUrl(date: string, view: View, query: string): string {
+function buildUrl(date: string, view: View, query: string, calendarId?: number): string {
   const params = new URLSearchParams();
   if (date !== todayStr() || view === "month") params.set("date", date);
   if (view !== "day") params.set("view", view);
   if (query) params.set("q", query);
+  if (calendarId) params.set("calendarId", String(calendarId));
   const s = params.toString();
   return s ? `/?${s}` : "/";
 }
 
-function buildDataUrl(date: string, view: View): string {
-  if (view === "week") return `/api/events?from=${date}&to=${shiftDate(date, 6)}`;
-  if (view === "month") return `/api/events?from=${shiftMonth(date, 0)}&to=${shiftDate(shiftMonth(date, 1), -1)}`;
-  return `/api/events?date=${date}`;
+function buildDataUrl(date: string, view: View, calendarId?: number): string {
+  const suffix = calendarId ? `&calendarId=${calendarId}` : "";
+  if (view === "week") return `/api/events?from=${date}&to=${shiftDate(date, 6)}${suffix}`;
+  if (view === "month") return `/api/events?from=${shiftMonth(date, 0)}&to=${shiftDate(shiftMonth(date, 1), -1)}${suffix}`;
+  return `/api/events?date=${date}${suffix}`;
 }
 
 export default function ScheduleArea({
@@ -60,6 +64,8 @@ export default function ScheduleArea({
   initialEvents,
   initialCurrentTime,
   userId,
+  initialCalendars,
+  initialCalendarId,
 }: {
   initialDate: string;
   initialView: View;
@@ -67,6 +73,8 @@ export default function ScheduleArea({
   initialEvents: CalendarEvent[];
   initialCurrentTime: string;
   userId: number;
+  initialCalendars: CalendarInfo[];
+  initialCalendarId: number;
 }) {
   const [date, setDate] = useState(initialDate);
   const [view, setView] = useState<View>(initialView);
@@ -85,19 +93,29 @@ export default function ScheduleArea({
   const markRequestRef = useRef(0);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualNotice, setManualNotice] = useState("");
+  const [calendars, setCalendars] = useState(initialCalendars);
+  const [activeCalendarId, setActiveCalendarId] = useState(initialCalendarId);
 
   // 只缓存服务端首屏对应的请求，避免切换日期时把尚未更新的旧数组写进新日期缓存。
-  const initialDataUrl = buildDataUrl(initialDate, initialView);
+  const initialDataUrl = buildDataUrl(initialDate, initialView, initialCalendarId);
   useEffect(() => {
     setOfflineUserId(userId);
     cacheSet(initialDataUrl, { events: initialEvents });
   }, [initialDataUrl, initialEvents, userId]);
 
-  const load = useCallback(async (d: string, v: View) => {
+  useEffect(() => {
+    try {
+      localStorage.setItem(`aical:active-calendar:${userId}`, String(activeCalendarId));
+    } catch {
+      // 本地存储不可用时，当前页面仍可正常切换日历。
+    }
+  }, [activeCalendarId, userId]);
+
+  const load = useCallback(async (d: string, v: View, calendarId = activeCalendarId) => {
     const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
-      const url = buildDataUrl(d, v);
+      const url = buildDataUrl(d, v, calendarId);
       const res = await fetchCachedJson<{ events: CalendarEvent[] }>(url);
       if (requestId !== loadRequestRef.current) return;
       setEvents(res.data?.events ?? []);
@@ -107,20 +125,20 @@ export default function ScheduleArea({
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
     }
-  }, []);
+  }, [activeCalendarId]);
 
   const loadCalendarMarks = useCallback(async (d: string) => {
     const requestId = ++markRequestRef.current;
     const from = shiftMonth(d, 0);
     const to = shiftDate(shiftMonth(d, 1), -1);
     try {
-      const result = await fetchCachedJson<{ marks: CalendarMark[] }>(`/api/calendar-marks?from=${from}&to=${to}`);
+      const result = await fetchCachedJson<{ marks: CalendarMark[] }>(`/api/calendar-marks?from=${from}&to=${to}&calendarId=${activeCalendarId}`);
       if (requestId !== markRequestRef.current) return;
       setCalendarMarks(result.data?.marks ?? []);
     } catch {
       if (requestId === markRequestRef.current) setCalendarMarks([]);
     }
-  }, []);
+  }, [activeCalendarId]);
 
   const saveCalendarMark = useCallback(async (url: string, method: "POST" | "PATCH" | "DELETE", body?: unknown) => {
     if (!isOnline()) throw new Error("当前离线，连接网络后再保存日历标记");
@@ -140,18 +158,60 @@ export default function ScheduleArea({
     }
   }, [date, loadCalendarMarks, view]);
 
+  function selectCalendar(calendarId: number) {
+    if (!calendars.some((calendar) => calendar.id === calendarId)) return;
+    setActiveCalendarId(calendarId);
+    setEvents([]);
+    setUsingCachedData(false);
+    setManualNotice("");
+    window.history.pushState(null, "", buildUrl(date, view, query, calendarId));
+    void load(date, view, calendarId);
+  }
+
+  async function createCalendar(name: string) {
+    if (!isOnline()) throw new Error("当前离线，连接网络后再管理日历");
+    const response = await fetch("/api/calendars", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    const payload = (await response.json().catch(() => ({}))) as { calendar?: CalendarInfo; error?: string };
+    if (!response.ok || !payload.calendar) throw new Error(payload.error || "创建日历失败");
+    const created = payload.calendar;
+    setCalendars((current) => [...current, created]);
+    setActiveCalendarId(created.id);
+    setEvents([]);
+    window.history.pushState(null, "", buildUrl(date, view, query, created.id));
+    void load(date, view, created.id);
+  }
+
+  async function renameCalendar(calendarId: number, name: string) {
+    if (!isOnline()) throw new Error("当前离线，连接网络后再管理日历");
+    const response = await fetch(`/api/calendars/${calendarId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    const payload = (await response.json().catch(() => ({}))) as { calendar?: CalendarInfo; error?: string };
+    if (!response.ok || !payload.calendar) throw new Error(payload.error || "修改日历失败");
+    setCalendars((current) => current.map((calendar) => calendar.id === calendarId ? payload.calendar! : calendar));
+  }
+
+  async function removeCalendar(calendarId: number) {
+    if (!isOnline()) throw new Error("当前离线，连接网络后再管理日历");
+    const response = await fetch(`/api/calendars/${calendarId}`, { method: "DELETE" });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) throw new Error(payload.error || "删除日历失败");
+    const remaining = calendars.filter((calendar) => calendar.id !== calendarId);
+    setCalendars(remaining);
+    const nextId = remaining[0]?.id;
+    if (nextId) selectCalendar(nextId);
+  }
+
   function navigate(d: string, v: View) {
     setDate(d);
     setView(v);
     setEvents([]);
     setUsingCachedData(false);
-    window.history.pushState(null, "", buildUrl(d, v, query));
-    void load(d, v);
+    window.history.pushState(null, "", buildUrl(d, v, query, activeCalendarId));
+    void load(d, v, activeCalendarId);
   }
 
   function search(q: string) {
     setQuery(q);
-    window.history.pushState(null, "", buildUrl(date, view, q));
+    window.history.pushState(null, "", buildUrl(date, view, q, activeCalendarId));
   }
 
   useEffect(() => {
@@ -161,17 +221,20 @@ export default function ScheduleArea({
       const d = raw && isValidDateStr(raw) ? raw : todayStr();
       const v: View = params.get("view") === "week" ? "week" : params.get("view") === "month" ? "month" : "day";
       const q = params.get("q") ?? "";
+      const rawCalendarId = Number(params.get("calendarId"));
+      const nextCalendarId = calendars.some((calendar) => calendar.id === rawCalendarId) ? rawCalendarId : initialCalendarId;
       setDate(d);
       setView(v);
       setQuery(q);
+      setActiveCalendarId(nextCalendarId);
       setSearchOpen(q !== "");
       setEvents([]);
       setUsingCachedData(false);
-      void load(d, v);
+      void load(d, v, nextCalendarId);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [load]);
+  }, [calendars, initialCalendarId, load]);
 
   // 网络状态由 useSyncExternalStore 驱动；恢复联网后刷新当前视图。
   useEffect(() => {
@@ -245,6 +308,15 @@ export default function ScheduleArea({
         </button>
       </div>
 
+      <CalendarSwitcher
+        calendars={calendars}
+        activeId={activeCalendarId}
+        onChange={selectCalendar}
+        onCreate={createCalendar}
+        onRename={renameCalendar}
+        onDelete={removeCalendar}
+      />
+
       {/* 搜索行（点菜单里的"搜索"展开） */}
       {searchOpen && (
         <div className="mb-3 flex items-center gap-2">
@@ -315,8 +387,8 @@ export default function ScheduleArea({
               query={query}
               onMonthChange={(d) => navigate(d, "month")}
               onSelectDay={(d) => navigate(d, "day")}
-              onCreateMark={(mark: NewCalendarMark) => saveCalendarMark("/api/calendar-marks", "POST", mark)}
-              onUpdateMark={(id: number, mark: NewCalendarMark) => saveCalendarMark(`/api/calendar-marks/${id}`, "PATCH", mark)}
+              onCreateMark={(mark: NewCalendarMark) => saveCalendarMark("/api/calendar-marks", "POST", { ...mark, calendarId: activeCalendarId })}
+              onUpdateMark={(id: number, mark: NewCalendarMark) => saveCalendarMark(`/api/calendar-marks/${id}`, "PATCH", { ...mark, calendarId: activeCalendarId })}
               onDeleteMark={(id: number) => saveCalendarMark(`/api/calendar-marks/${id}`, "DELETE")}
             />
           ) : (
@@ -387,7 +459,7 @@ export default function ScheduleArea({
             </a>
             <div className="flex items-center gap-2 px-1 py-2">
               <span className="flex-1" />
-              <ExportButton from={exportFrom} to={exportTo} />
+              <ExportButton from={exportFrom} to={exportTo} calendarId={activeCalendarId} />
               <ImportButton />
             </div>
             <a href="/settings" className={menuItem} onClick={() => setMenuOpen(false)}>
@@ -407,6 +479,7 @@ export default function ScheduleArea({
       {manualOpen && (
         <ManualEventForm
           initialDate={view === "month" ? `${date.slice(0, 7)}-01` : date}
+          calendarId={activeCalendarId}
           onClose={() => setManualOpen(false)}
           onSaved={async (message) => {
             setManualNotice(message);

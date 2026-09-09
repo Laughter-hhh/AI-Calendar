@@ -3,9 +3,11 @@ import { getDb } from "./db";
 import { shiftDate } from "./date";
 import { EVENT_COLORS } from "./colors";
 import { assertValidEventTiming } from "./event-validation";
+import { getCalendar, listCalendars } from "./calendars";
 
 export interface CalendarEvent {
   id: number;
+  calendarId: number;
   title: string;
   date: string;
   startTime: string | null;
@@ -24,6 +26,7 @@ export interface CalendarEvent {
 }
 
 export interface NewEvent {
+  calendarId?: number | null;
   title: string;
   date: string;
   time: string | null;
@@ -46,6 +49,7 @@ export interface ImportedEvent extends NewEvent {
 function mapRow(row: Record<string, unknown>): CalendarEvent {
   return {
     id: Number(row.id),
+    calendarId: Number(row.calendar_id ?? 0),
     title: String(row.title),
     date: String(row.event_date),
     startTime: row.start_time === null ? null : String(row.start_time),
@@ -136,7 +140,7 @@ export function occursOn(baseDate: string, repeat: string, target: string, repea
 }
 
 /** 单个用户在某天的日程（含重复事件展开与例外日排除） */
-function eventsForOwnerOnDate(db: ReturnType<typeof getDb>, ownerId: number, date: string): CalendarEvent[] {
+function eventsForOwnerOnDate(db: ReturnType<typeof getDb>, ownerId: number, date: string, calendarId?: number): CalendarEvent[] {
   // 该日的例外事件 id（用户在这天取消了某个重复事件）
   const exceptions = new Set<number>(
     (db.prepare("SELECT event_id FROM event_exceptions WHERE date = ?").all(date) as Array<{ event_id: number }>).map(
@@ -144,15 +148,12 @@ function eventsForOwnerOnDate(db: ReturnType<typeof getDb>, ownerId: number, dat
     )
   );
 
-  const direct = db
-    .prepare("SELECT * FROM events WHERE user_id = ? AND event_date = ?")
-    .all(ownerId, date) as unknown as Record<string, unknown>[];
-  const recurring = db
-    .prepare(
-      `SELECT * FROM events
-       WHERE user_id = ? AND event_date <= ? AND repeat IS NOT NULL`
-    )
-    .all(ownerId, date) as unknown as Record<string, unknown>[];
+  const direct = (calendarId === undefined
+    ? db.prepare("SELECT * FROM events WHERE user_id = ? AND event_date = ?").all(ownerId, date)
+    : db.prepare("SELECT * FROM events WHERE user_id = ? AND calendar_id = ? AND event_date = ?").all(ownerId, calendarId, date)) as unknown as Record<string, unknown>[];
+  const recurring = (calendarId === undefined
+    ? db.prepare("SELECT * FROM events WHERE user_id = ? AND event_date <= ? AND repeat IS NOT NULL").all(ownerId, date)
+    : db.prepare("SELECT * FROM events WHERE user_id = ? AND calendar_id = ? AND event_date <= ? AND repeat IS NOT NULL").all(ownerId, calendarId, date)) as unknown as Record<string, unknown>[];
 
   const byId = new Map<number, CalendarEvent>();
 
@@ -180,12 +181,12 @@ function eventsForOwnerOnDate(db: ReturnType<typeof getDb>, ownerId: number, dat
 }
 
 /** 查询某天的日程（本人 + 共享给我的日历），含重复事件展开与例外日排除 */
-export function listEvents(userId: number, date: string): CalendarEvent[] {
+export function listEvents(userId: number, date: string, calendarId?: number): CalendarEvent[] {
   const db = getDb();
   const owners = getSharedOwners(db, userId);
   const out: CalendarEvent[] = [];
   for (const owner of owners) {
-    for (const ev of eventsForOwnerOnDate(db, owner.id, date)) {
+    for (const ev of eventsForOwnerOnDate(db, owner.id, date, owner.id === userId ? calendarId : undefined)) {
       out.push({ ...ev, ownerEmail: owner.email });
     }
   }
@@ -213,26 +214,20 @@ function getSharedOwners(db: ReturnType<typeof getDb>, userId: number): Array<{ 
 }
 
 /** 查询日期区间的日程（每天展开重复事件），用于周视图 / AI 修改日程的候选搜索 */
-export function listEventsRange(userId: number, from: string, to: string): CalendarEvent[] {
+export function listEventsRange(userId: number, from: string, to: string, calendarId?: number): CalendarEvent[] {
   // 优化：不再按天循环查库，改为批量查询后内存展开（大幅减少查询次数，修复手机端卡顿）
   const db = getDb();
   const owners = getSharedOwners(db, userId);
   const out: CalendarEvent[] = [];
 
   for (const owner of owners) {
-    const direct = db
-      .prepare(
-        `SELECT * FROM events
-         WHERE user_id = ? AND event_date BETWEEN ? AND ? AND repeat IS NULL`
-      )
-      .all(owner.id, from, to) as unknown as Record<string, unknown>[];
-    const recurring = db
-      .prepare(
-        `SELECT * FROM events
-         WHERE user_id = ? AND repeat IS NOT NULL AND event_date <= ?
-           AND (repeat_until IS NULL OR repeat_until >= ?)`
-      )
-      .all(owner.id, to, from) as unknown as Record<string, unknown>[];
+    const ownerCalendar = owner.id === userId ? calendarId : undefined;
+    const direct = (ownerCalendar === undefined
+      ? db.prepare("SELECT * FROM events WHERE user_id = ? AND event_date BETWEEN ? AND ? AND repeat IS NULL").all(owner.id, from, to)
+      : db.prepare("SELECT * FROM events WHERE user_id = ? AND calendar_id = ? AND event_date BETWEEN ? AND ? AND repeat IS NULL").all(owner.id, ownerCalendar, from, to)) as unknown as Record<string, unknown>[];
+    const recurring = (ownerCalendar === undefined
+      ? db.prepare("SELECT * FROM events WHERE user_id = ? AND repeat IS NOT NULL AND event_date <= ? AND (repeat_until IS NULL OR repeat_until >= ?)").all(owner.id, to, from)
+      : db.prepare("SELECT * FROM events WHERE user_id = ? AND calendar_id = ? AND repeat IS NOT NULL AND event_date <= ? AND (repeat_until IS NULL OR repeat_until >= ?)").all(owner.id, ownerCalendar, to, from)) as unknown as Record<string, unknown>[];
 
     const exceptions = new Set<string>(
       (
@@ -280,13 +275,14 @@ export function findEventConflicts(
   date: string,
   startTime: string | null,
   endTime: string | null,
-  excludeId?: number
+  excludeId?: number,
+  calendarId?: number
 ): CalendarEvent[] {
   if (!startTime) return [];
   const start = clockMinutes(startTime);
   if (start === null) return [];
   const end = Math.min(24 * 60, Math.max(start + 30, clockMinutes(endTime) ?? start + 60));
-  return listEvents(userId, date).filter((candidate) => {
+  return listEvents(userId, date, calendarId).filter((candidate) => {
     if (candidate.id === excludeId || !candidate.startTime) return false;
     const candidateStart = clockMinutes(candidate.startTime);
     if (candidateStart === null) return false;
@@ -304,17 +300,28 @@ function clockMinutes(value: string | null): number | null {
   return hour * 60 + minute;
 }
 
+function resolveCalendarId(userId: number, requested?: number | null): number {
+  const calendars = listCalendars(userId);
+  if (requested !== undefined && requested !== null) {
+    if (!getCalendar(userId, requested)) throw new Error("日历不存在或无权使用");
+    return requested;
+  }
+  return calendars[0].id;
+}
+
 export function createEvent(userId: number, data: NewEvent): CalendarEvent {
   assertValidEventTiming(data.time, data.endTime ?? null);
+  const calendarId = resolveCalendarId(userId, data.calendarId);
   // 未指定颜色时，自动随机分配一个非灰色（跳过 EVENT_COLORS 第一项"无"）
   const color = data.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
   const info = getDb()
     .prepare(
-      `INSERT INTO events (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, repeat_config, color, done, source_text, external_uid, updated_at, series_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`
+      `INSERT INTO events (user_id, calendar_id, title, event_date, start_time, end_time, note, repeat, repeat_until, repeat_config, color, done, source_text, external_uid, updated_at, series_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`
     )
     .run(
       userId,
+      calendarId,
       data.title.trim(),
       data.date,
       data.time ?? null,
@@ -331,6 +338,7 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
     );
   return {
     id: Number(info.lastInsertRowid),
+    calendarId,
     title: data.title.trim(),
     date: data.date,
     startTime: data.time ?? null,
@@ -347,13 +355,13 @@ export function createEvent(userId: number, data: NewEvent): CalendarEvent {
 }
 
 /** 查询已导入的外部 UID，供导入预览使用；只看当前用户，不触碰原日程。 */
-export function existingExternalUids(userId: number, uids: string[]): Set<string> {
+export function existingExternalUids(userId: number, uids: string[], calendarId?: number): Set<string> {
   const unique = [...new Set(uids.filter(Boolean))];
   if (unique.length === 0) return new Set();
   const placeholders = unique.map(() => "?").join(", ");
   const rows = getDb()
-    .prepare(`SELECT external_uid FROM events WHERE user_id = ? AND external_uid IN (${placeholders})`)
-    .all(userId, ...unique) as unknown as Array<{ external_uid: string }>;
+    .prepare(calendarId === undefined ? `SELECT external_uid FROM events WHERE user_id = ? AND external_uid IN (${placeholders})` : `SELECT external_uid FROM events WHERE user_id = ? AND calendar_id = ? AND external_uid IN (${placeholders})`)
+    .all(...(calendarId === undefined ? [userId, ...unique] : [userId, calendarId, ...unique])) as unknown as Array<{ external_uid: string }>;
   return new Set(rows.map((row) => String(row.external_uid)));
 }
 
@@ -364,11 +372,12 @@ export function existingExternalUids(userId: number, uids: string[]): Set<string
 export function importEvents(userId: number, events: ImportedEvent[]): { imported: number; duplicates: number } {
   for (const event of events) assertValidEventTiming(event.time, event.endTime ?? null);
   const db = getDb();
-  const known = existingExternalUids(userId, events.map((event) => event.externalUid));
+  const calendarId = resolveCalendarId(userId, events[0]?.calendarId);
+  const known = existingExternalUids(userId, events.map((event) => event.externalUid), calendarId);
   const insert = db.prepare(
       `INSERT OR IGNORE INTO events
-      (user_id, title, event_date, start_time, end_time, note, repeat, repeat_until, repeat_config, color, done, source_text, external_uid, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      (user_id, calendar_id, title, event_date, start_time, end_time, note, repeat, repeat_until, repeat_config, color, done, source_text, external_uid, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
   );
   let imported = 0;
   let duplicates = 0;
@@ -383,6 +392,7 @@ export function importEvents(userId: number, events: ImportedEvent[]): { importe
       const color = event.color ?? EVENT_COLORS[Math.floor(Math.random() * (EVENT_COLORS.length - 1)) + 1].value;
       const result = insert.run(
         userId,
+        calendarId,
         event.title.trim(),
         event.date,
         event.time ?? null,
@@ -424,6 +434,7 @@ export function updateEvent(
   if (!existing) return null;
 
   const merged: Required<NewEvent> = {
+    calendarId: data.calendarId !== undefined && data.calendarId !== null ? resolveCalendarId(userId, data.calendarId) : Number(existing.calendar_id),
     title: data.title?.trim() || String(existing.title),
     date: data.date || String(existing.event_date),
     time: data.time !== undefined ? data.time : (existing.start_time as string | null),
@@ -442,9 +453,10 @@ export function updateEvent(
 
   db.prepare(
     `UPDATE events
-     SET title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, repeat_config = ?, color = ?, done = ?, source_text = ?, updated_at = datetime('now')
+     SET calendar_id = ?, title = ?, event_date = ?, start_time = ?, end_time = ?, note = ?, repeat = ?, repeat_until = ?, repeat_config = ?, color = ?, done = ?, source_text = ?, updated_at = datetime('now')
      WHERE id = ? AND user_id = ?`
   ).run(
+    merged.calendarId,
     merged.title,
     merged.date,
     merged.time,
@@ -486,6 +498,7 @@ export function updateSingleOccurrence(
   if (!repeat) return updateEvent(userId, eventId, data);
 
   const event: NewEvent = {
+    calendarId: Number(existing.calendar_id),
     title: data.title?.trim() || String(existing.title),
     date: data.date || occurrenceDate,
     time: data.time !== undefined ? data.time : (existing.start_time as string | null),

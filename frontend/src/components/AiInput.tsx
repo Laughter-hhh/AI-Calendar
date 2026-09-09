@@ -115,8 +115,16 @@ export default function AiInput() {
     const conflictTitles: string[] = [];
     let queuedCount = 0;
     try {
+      let calendarId: number | undefined;
+      try {
+        const activeUser = Number(localStorage.getItem("aical:active-user"));
+        const selected = Number(localStorage.getItem(`aical:active-calendar:${activeUser}`));
+        if (Number.isInteger(selected) && selected > 0) calendarId = selected;
+      } catch {
+        // 无法读取本地选择时由服务器使用默认日历。
+      }
       for (const ev of result.events) {
-        const payload = { ...ev, sourceText: text };
+        const payload = { ...ev, sourceText: text, ...(calendarId ? { calendarId } : {}) };
         let response: Response;
         try {
           response = await fetch("/api/events", {

@@ -30,6 +30,16 @@ export default function ImportButton() {
   const [msg, setMsg] = useState("");
   const [pending, setPending] = useState<PendingImport | null>(null);
 
+  function selectedCalendarId(): number | undefined {
+    try {
+      const activeUser = Number(localStorage.getItem("aical:active-user"));
+      const selected = Number(localStorage.getItem(`aical:active-calendar:${activeUser}`));
+      return Number.isInteger(selected) && selected > 0 ? selected : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async function onFile(file: File) {
     setBusy(true);
     setMsg("");
@@ -46,7 +56,7 @@ export default function ImportButton() {
       const previewRes = await fetch("/api/events/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, fileName: file.name, mode: "preview" }),
+        body: JSON.stringify({ content, fileName: file.name, mode: "preview", calendarId: selectedCalendarId() }),
       });
       const preview = (await previewRes.json()) as ImportPreview & { error?: string };
       if (!previewRes.ok) {
@@ -78,6 +88,7 @@ export default function ImportButton() {
           content: pending.content,
           fileName: pending.fileName,
           mode: "import",
+          calendarId: selectedCalendarId(),
         }),
       });
       const result = await importRes.json();

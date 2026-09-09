@@ -69,6 +69,17 @@ CREATE TABLE IF NOT EXISTS notes (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id, done, created_at);
+CREATE TABLE IF NOT EXISTS calendar_marks (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  mark_date  TEXT NOT NULL,
+  title      TEXT NOT NULL,
+  type       TEXT NOT NULL DEFAULT 'custom',
+  note       TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_calendar_marks_user_date ON calendar_marks(user_id, mark_date);
 `;
 
 /** 兼容旧数据库：给已存在的 events 表补上新增的列 */
@@ -100,6 +111,22 @@ function ensureEventsColumns(db: DatabaseSync): void {
   }
 }
 
+function ensureCalendarMarksTable(db: DatabaseSync): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS calendar_marks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      mark_date TEXT NOT NULL,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'custom',
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_calendar_marks_user_date ON calendar_marks(user_id, mark_date);
+  `);
+}
+
 export function getDb(): DatabaseSync {
   if (db) return db;
 
@@ -118,6 +145,7 @@ export function getDb(): DatabaseSync {
     }
     connection.exec(schema);
     ensureEventsColumns(connection);
+    ensureCalendarMarksTable(connection);
     connection.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_user_external_uid ON events(user_id, external_uid)");
     connection.exec("PRAGMA journal_mode = WAL;");
     connection.exec("PRAGMA foreign_keys = ON;");

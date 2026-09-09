@@ -45,11 +45,31 @@ async function main() {
   check("未登录不能导入", unauthenticatedImport.status === 401);
 
   const email = `calendar-features-${Date.now()}@test.local`;
+  const unauthenticatedMarks = await api("/api/calendar-marks?from=2026-09-01&to=2026-09-30");
+  check("未登录不能读取月日历标记", unauthenticatedMarks.status === 401);
   const register = await api("/api/auth/register", {
     method: "POST",
     body: { email, password: "123456" },
   });
   check("注册隔离测试账号", register.status === 200);
+
+  const createdMark = await api("/api/calendar-marks", {
+    method: "POST",
+    body: { date: "2026-09-10", title: "实验室纪念日", type: "anniversary", note: "双月视图回归样本" },
+  });
+  const markId = createdMark.data?.mark?.id;
+  check("添加月日历纪念日标记", createdMark.status === 201 && markId !== undefined, JSON.stringify(createdMark.data));
+  const marksList = await api("/api/calendar-marks?from=2026-09-01&to=2026-09-30");
+  check("月日历标记按日期查询", marksList.status === 200 && marksList.data?.marks?.some((mark) => mark.id === markId && mark.title === "实验室纪念日"));
+  const editedMark = await api(`/api/calendar-marks/${markId}`, {
+    method: "PATCH",
+    body: { title: "实验室周年纪念", date: "2026-09-11", type: "custom" },
+  });
+  check("月日历标记可编辑日期和名称", editedMark.status === 200 && editedMark.data?.mark?.title === "实验室周年纪念" && editedMark.data?.mark?.date === "2026-09-11", JSON.stringify(editedMark.data));
+  const monthPage = await api("/?date=2026-09-01&view=month");
+  check("月视图提供日历和日程双界面", monthPage.status === 200 && monthPage.text.includes("日历") && monthPage.text.includes("日程"));
+  const deletedMark = await api(`/api/calendar-marks/${markId}`, { method: "DELETE" });
+  check("月日历标记可删除", deletedMark.status === 200 && deletedMark.data?.ok === true);
 
   const multiParse = await api("/api/ai/parse", {
     method: "POST",

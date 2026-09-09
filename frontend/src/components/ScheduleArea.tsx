@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import type { CalendarEvent } from "@/lib/events";
+import type { CalendarMark, NewCalendarMark } from "@/lib/calendar-mark-types";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
 import { cacheSet, fetchCachedJson, isOnline, setOfflineUserId } from "@/lib/offline";
@@ -12,6 +13,7 @@ import EventList from "./EventList";
 import ExportButton from "./ExportButton";
 import ImportButton from "./ImportButton";
 import DayTimelineView from "./DayTimelineView";
+import CalendarMonthView from "./CalendarMonthView";
 
 const WeekView = dynamic(() => import("./WeekView"), { ssr: true });
 const MonthView = dynamic(() => import("./MonthView"), { ssr: true });
@@ -77,6 +79,9 @@ export default function ScheduleArea({
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(initialQuery !== "");
   const [dayMode, setDayMode] = useState<"list" | "timeline">("list");
+  const [monthMode, setMonthMode] = useState<"calendar" | "schedule">("calendar");
+  const [calendarMarks, setCalendarMarks] = useState<CalendarMark[]>([]);
+  const markRequestRef = useRef(0);
 
   // 只缓存服务端首屏对应的请求，避免切换日期时把尚未更新的旧数组写进新日期缓存。
   const initialDataUrl = buildDataUrl(initialDate, initialView);
@@ -100,6 +105,37 @@ export default function ScheduleArea({
       if (requestId === loadRequestRef.current) setLoading(false);
     }
   }, []);
+
+  const loadCalendarMarks = useCallback(async (d: string) => {
+    const requestId = ++markRequestRef.current;
+    const from = shiftMonth(d, 0);
+    const to = shiftDate(shiftMonth(d, 1), -1);
+    try {
+      const result = await fetchCachedJson<{ marks: CalendarMark[] }>(`/api/calendar-marks?from=${from}&to=${to}`);
+      if (requestId !== markRequestRef.current) return;
+      setCalendarMarks(result.data?.marks ?? []);
+    } catch {
+      if (requestId === markRequestRef.current) setCalendarMarks([]);
+    }
+  }, []);
+
+  const saveCalendarMark = useCallback(async (url: string, method: "POST" | "PATCH" | "DELETE", body?: unknown) => {
+    if (!isOnline()) throw new Error("当前离线，连接网络后再保存日历标记");
+    const response = await fetch(url, {
+      method,
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) throw new Error(payload.error || "保存失败，请稍后重试");
+    await loadCalendarMarks(date);
+  }, [date, loadCalendarMarks]);
+
+  useEffect(() => {
+    if (view === "month") {
+      queueMicrotask(() => void loadCalendarMarks(date));
+    }
+  }, [date, loadCalendarMarks, view]);
 
   function navigate(d: string, v: View) {
     setDate(d);
@@ -245,15 +281,39 @@ export default function ScheduleArea({
         </div>
       )}
 
+      {view === "month" && (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-xs font-medium text-sky-700/70">月视图</span>
+          <div className="ui-segment" aria-label="月视图显示方式">
+            <button type="button" onClick={() => setMonthMode("calendar")} className={monthMode === "calendar" ? "ui-segment-active" : "ui-segment-item"}>日历</button>
+            <button type="button" onClick={() => setMonthMode("schedule")} className={monthMode === "schedule" ? "ui-segment-active" : "ui-segment-item"}>日程</button>
+          </div>
+        </div>
+      )}
+
       <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
         {view === "month" ? (
-          <MonthView
-            initialEvents={events}
-            startDate={date}
-            query={query}
-            onMonthChange={(d) => navigate(d, "month")}
-            onSelectDay={(d) => navigate(d, "day")}
-          />
+          monthMode === "calendar" ? (
+            <CalendarMonthView
+              initialEvents={events}
+              initialMarks={calendarMarks}
+              startDate={date}
+              query={query}
+              onMonthChange={(d) => navigate(d, "month")}
+              onSelectDay={(d) => navigate(d, "day")}
+              onCreateMark={(mark: NewCalendarMark) => saveCalendarMark("/api/calendar-marks", "POST", mark)}
+              onUpdateMark={(id: number, mark: NewCalendarMark) => saveCalendarMark(`/api/calendar-marks/${id}`, "PATCH", mark)}
+              onDeleteMark={(id: number) => saveCalendarMark(`/api/calendar-marks/${id}`, "DELETE")}
+            />
+          ) : (
+            <MonthView
+              initialEvents={events}
+              startDate={date}
+              query={query}
+              onMonthChange={(d) => navigate(d, "month")}
+              onSelectDay={(d) => navigate(d, "day")}
+            />
+          )
         ) : view === "week" ? (
           <WeekView initialEvents={events} startDate={date} query={query} onSelectDay={(d) => navigate(d, "day")} />
         ) : dayMode === "timeline" ? (

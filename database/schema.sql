@@ -63,3 +63,16 @@ CREATE TABLE IF NOT EXISTS notes (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id, done, created_at);
+
+-- 月日历标记：独立于日程事件，保存用户自定义节日、纪念日和备注
+CREATE TABLE IF NOT EXISTS calendar_marks (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  mark_date  TEXT NOT NULL,
+  title      TEXT NOT NULL,
+  type       TEXT NOT NULL DEFAULT 'custom',
+  note       TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_calendar_marks_user_date ON calendar_marks(user_id, mark_date);

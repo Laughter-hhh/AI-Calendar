@@ -14,6 +14,7 @@ import ExportButton from "./ExportButton";
 import ImportButton from "./ImportButton";
 import DayTimelineView from "./DayTimelineView";
 import CalendarMonthView from "./CalendarMonthView";
+import ManualEventForm from "./ManualEventForm";
 
 const WeekView = dynamic(() => import("./WeekView"), { ssr: true });
 const MonthView = dynamic(() => import("./MonthView"), { ssr: true });
@@ -82,6 +83,8 @@ export default function ScheduleArea({
   const [monthMode, setMonthMode] = useState<"calendar" | "schedule">("calendar");
   const [calendarMarks, setCalendarMarks] = useState<CalendarMark[]>([]);
   const markRequestRef = useRef(0);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualNotice, setManualNotice] = useState("");
 
   // 只缓存服务端首屏对应的请求，避免切换日期时把尚未更新的旧数组写进新日期缓存。
   const initialDataUrl = buildDataUrl(initialDate, initialView);
@@ -225,6 +228,14 @@ export default function ScheduleArea({
         </div>
         <button
           type="button"
+          onClick={() => { setManualNotice(""); setManualOpen(true); }}
+          className="ui-button-primary h-10 shrink-0 px-3 text-sm sm:px-4"
+          title="手动添加日程"
+        >
+          <span aria-hidden="true">＋</span><span className="hidden sm:inline">添加</span>
+        </button>
+        <button
+          type="button"
           onClick={() => setMenuOpen(true)}
           className="ui-button-secondary h-10 w-11 shrink-0 px-0 text-lg leading-none"
           title="更多功能"
@@ -279,6 +290,9 @@ export default function ScheduleArea({
             ))}
           </div>
         </div>
+      )}
+      {manualNotice && (
+        <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-xs text-emerald-800">{manualNotice}</p>
       )}
 
       {view === "month" && (
@@ -388,6 +402,17 @@ export default function ScheduleArea({
             <p className="mt-2 text-center text-xs text-zinc-400">AI Calendar v{APP_VERSION}</p>
           </div>
         </div>
+      )}
+
+      {manualOpen && (
+        <ManualEventForm
+          initialDate={view === "month" ? `${date.slice(0, 7)}-01` : date}
+          onClose={() => setManualOpen(false)}
+          onSaved={async (message) => {
+            setManualNotice(message);
+            await load(date, view);
+          }}
+        />
       )}
     </section>
   );

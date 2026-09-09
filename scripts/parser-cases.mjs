@@ -284,6 +284,50 @@ async function main() {
   r = await parse("八点半进行实验计划与果蝇收集");
   check("八点半进行… → 08:30 且标题干净", r.result.events?.[0]?.time === "08:30" && r.result.events?.[0]?.title === "实验计划与果蝇收集", JSON.stringify(r.result));
 
+  const multiYear = new Date(Date.now() + 8 * 3600 * 1000).getUTCFullYear();
+  const multiDay1 = multiYear + "-09-10";
+  const multiDay2 = multiYear + "-09-11";
+  r = await parse("九月十日十五点开会，十八点吃饭");
+  check(
+    "同一天两项任务 → 分成两条且共享日期",
+    r.result.events?.length === 2 &&
+      r.result.events.every((event) => event.date === multiDay1) &&
+      r.result.events[0]?.title === "开会" &&
+      r.result.events[0]?.time === "15:00" &&
+      r.result.events[1]?.title === "吃饭" &&
+      r.result.events[1]?.time === "18:00",
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("九月十日，十五点开会，十八点吃饭");
+  check(
+    "孤立日期后多项任务 → 日期正确继承",
+    r.result.events?.length === 2 &&
+      r.result.events.every((event) => event.date === multiDay1) &&
+      r.result.events.every((event) => event.time !== null),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("在九月十日，十五点开会，十八点吃饭");
+  check(
+    "带“在”日期前缀的多项任务 → 日期和标题均正确",
+    r.result.events?.length === 2 &&
+      r.result.events.every((event) => event.date === multiDay1) &&
+      r.result.events.every((event) => event.title !== "在"),
+    JSON.stringify(r.result)
+  );
+
+  r = await parse("九月十日十五点开会，九月十一日十八点写报告");
+  check(
+    "不同日期两项任务 → 分成两条且日期不串",
+    r.result.events?.length === 2 &&
+      r.result.events[0]?.date === multiDay1 &&
+      r.result.events[0]?.title === "开会" &&
+      r.result.events[1]?.date === multiDay2 &&
+      r.result.events[1]?.title === "写报告",
+    JSON.stringify(r.result)
+  );
+
   r = await parse("第一周、第三周、第六周、第七周下午三点开会");
   const irregular = r.result.events?.[0];
   const irregularConfig = irregular?.repeatConfig ? JSON.parse(irregular.repeatConfig) : {};

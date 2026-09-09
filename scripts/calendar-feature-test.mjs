@@ -50,6 +50,32 @@ async function main() {
     body: { email, password: "123456" },
   });
   check("注册隔离测试账号", register.status === 200);
+
+  const multiParse = await api("/api/ai/parse", {
+    method: "POST",
+    body: { text: "九月十日十五点开会，十八点吃饭" },
+  });
+  const multiEvents = multiParse.data?.result?.events ?? [];
+  const savedMultiIds = [];
+  for (const event of multiEvents) {
+    const saved = await api("/api/events", {
+      method: "POST",
+      body: { ...event, sourceText: "九月十日十五点开会，十八点吃饭" },
+    });
+    if (saved.data?.event?.id) savedMultiIds.push(saved.data.event.id);
+  }
+  const multiDayEvents = await api("/api/events?date=2026-09-10");
+  check(
+    "多项日程解析后分别保存并显示在同一天",
+    multiParse.status === 200 &&
+      multiEvents.length === 2 &&
+      savedMultiIds.length === 2 &&
+      multiDayEvents.data?.events?.some((event) => event.title === "开会" && event.startTime === "15:00") &&
+      multiDayEvents.data?.events?.some((event) => event.title === "吃饭" && event.startTime === "18:00"),
+    JSON.stringify({ parse: multiParse.data, events: multiDayEvents.data })
+  );
+  for (const id of savedMultiIds) await api("/api/events/" + id, { method: "DELETE" });
+
   const unsupportedFile = await api("/api/events/import", {
     method: "POST",
     body: { fileName: "calendar.csv", mode: "preview", content: "title,date\n测试,2026-09-01" },

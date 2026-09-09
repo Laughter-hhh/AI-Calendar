@@ -16,6 +16,10 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+function cleanDateRest(value: string): string {
+  return value.replace(/^\s*(?:在|于)\s*/, "").replace(/\s+/g, " ").trim();
+}
+
 /** 把 "四" / "14" / "十四" 转成数字 */
 function cnToNumber(s: string): number | null {
   const n = Number(s);
@@ -51,7 +55,7 @@ export function resolveDate(text: string): { date: string; rest: string } | null
     const day = Number(isoDate[3]);
     if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       rest = rest.replace(isoDate[0], " ");
-      return { date: `${year}-${pad2(month)}-${pad2(day)}`, rest: rest.replace(/\s+/g, " ").trim() };
+      return { date: `${year}-${pad2(month)}-${pad2(day)}`, rest: cleanDateRest(rest) };
     }
   }
 
@@ -60,7 +64,7 @@ export function resolveDate(text: string): { date: string; rest: string } | null
   if (relative) {
     const days = /后天/.test(relative[0]) ? 2 : /明天|明日/.test(relative[0]) ? 1 : 0;
     rest = rest.replace(relative[0], " ");
-    return { date: addDaysStr(todayStr(), days), rest: rest.replace(/\s+/g, " ").trim() };
+    return { date: addDaysStr(todayStr(), days), rest: cleanDateRest(rest) };
   }
 
   const weekday = rest.match(/(下|这)?(?:周|星期|礼拜)([日天一二三四五六])/);
@@ -69,7 +73,7 @@ export function resolveDate(text: string): { date: string; rest: string } | null
     let diff = (target - weekdayOf(todayStr()) + 7) % 7;
     if (weekday[1] === "下") diff += 7;
     rest = rest.replace(weekday[0], " ");
-    return { date: addDaysStr(todayStr(), diff), rest: rest.replace(/\s+/g, " ").trim() };
+    return { date: addDaysStr(todayStr(), diff), rest: cleanDateRest(rest) };
   }
 
   const monthDay = rest.match(/([零一二两三四五六七八九十\d]{1,3})月([零一二两三四五六七八九十\d]{1,3})[日号]?/);
@@ -80,7 +84,7 @@ export function resolveDate(text: string): { date: string; rest: string } | null
       const year = Number(todayStr().slice(0, 4));
       rest = rest.replace(monthDay[0], " ");
       const dateStr = `${year}-${pad2(month)}-${pad2(day)}`;
-      return { date: addDaysStr(dateStr, 0), rest: rest.replace(/\s+/g, " ").trim() };
+      return { date: addDaysStr(dateStr, 0), rest: cleanDateRest(rest) };
     }
   }
 
@@ -209,6 +213,71 @@ function splitCompositeSchedule(text: string): { first: string; recurring: strin
   );
   if (!match) return null;
   return { first: match[1].trim(), recurring: match[2].trim() };
+}
+
+/** 判断逗号后的文本是否开启了新的日程（日期或具体时间），避免把标题中的逗号误拆。 */
+function startsScheduleClause(text: string): boolean {
+  return /^\s*(?:(?:然后|接着|随后|再|另外|同时)\s*)?(?:(?:在|于)\s*)?(?:(?:从)?(?:今天|今日|明天|明日|后天)|(?:本|这|下)(?:周|星期|礼拜)\s*[日天一二三四五六]|\d{4}[-/]\d{1,2}[-/]\d{1,2}|[零一二两三四五六七八九十\d]{1,3}月[零一二两三四五六七八九十\d]{1,3}[日号]?|(?:凌晨|清晨|早上|早晨|上午|中午|午间|下午|傍晚|晚上|晚间|夜里|夜晚)?\s*(?:\d{1,2}:\d{2}|[零一二两三四五六七八九十\d]{1,3}[点时]))/.test(
+    text
+  );
+}
+
+/** 将同日多事项、跨日多事项拆成独立语句；仅在分隔符后出现日期/时间时拆分。 */
+function splitMultipleSchedules(text: string): string[] | null {
+  const parts: string[] = [];
+  let start = 0;
+  for (const separator of text.matchAll(/[，,；;。]/g)) {
+    const index = separator.index ?? 0;
+    const right = text.slice(index + separator[0].length);
+    if (!startsScheduleClause(right)) continue;
+    const part = text.slice(start, index).trim();
+    if (!part) continue;
+    parts.push(part);
+    start = index + separator[0].length;
+  }
+  const last = text.slice(start).trim();
+  if (last) parts.push(last);
+  return parts.length >= 2 ? parts : null;
+}
+
+async function parseMultipleSchedules(
+  parts: string[],
+  context?: import("../types").ParseContext
+): Promise<ParseResult> {
+  const events: ParsedEvent[] = [];
+  const missing = new Set<string>();
+  const messages: string[] = [];
+  let inheritedDate = context?.date;
+
+  for (const part of parts) {
+    const explicitDate = resolveDate(part);
+    // “9月10日，15点开会，18点吃饭”中的孤立日期只作为后续事项的共享日期。
+    if (explicitDate && !cleanTitle(explicitDate.rest)) {
+      inheritedDate = explicitDate.date;
+      continue;
+    }
+    const partContext = explicitDate || !inheritedDate ? context : { ...context, date: inheritedDate };
+    const result = await localParser.parse(part, partContext);
+    events.push(...result.events);
+    result.missing.forEach((field) => missing.add(field));
+    if (result.message) messages.push(result.message);
+    const latestDate = result.events.map((event) => event.date).filter(Boolean).at(-1);
+    if (latestDate) inheritedDate = latestDate;
+  }
+
+  return {
+    events,
+    missing: [...missing],
+    message:
+      missing.size > 0
+        ? messages.join("；")
+        : "已识别 " + events.length + " 条独立日程，确认后保存。",
+  };
+}
+
+/** 是否包含多个可独立保存的日程片段。 */
+export function isMultipleScheduleSentence(text: string): boolean {
+  return splitMultipleSchedules(text.trim()) !== null;
 }
 
 function parseWeekNumberList(value: string): number[] {
@@ -384,9 +453,11 @@ export const localParser: AIParser = {
                   ? `${first.message}${recurring.message ? `；${recurring.message}` : ""}`
                   : `已识别 1 条一次性日程和 ${recurring.events.length} 条每周重复日程，确认后保存。`,
             };
-          });
+        });
       });
     }
+    const multiple = splitMultipleSchedules(input);
+    if (multiple) return parseMultipleSchedules(multiple, context);
     let rest = input;
 
     // 明确的起始日期要先从原句取出，供“每周四和周五”计算首个实例。

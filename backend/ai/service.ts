@@ -2,7 +2,7 @@
 // 1) 配置 Key 时：模型理解自然语言 → 改写成标准句式 → 本地固定程序生成日程
 // 2) 未配置 Key 或模型失败时：直接用本地规则解析器
 import { localParser } from "./providers/local";
-import { isCompositeScheduleSentence, isDeadlineSentence } from "./providers/local";
+import { isCompositeScheduleSentence, isDeadlineSentence, isMultipleScheduleSentence } from "./providers/local";
 import { OpenAICompatibleParser } from "./providers/openai";
 import type { ParseContext, ParseResult } from "./types";
 import { getConfig } from "./config";
@@ -49,6 +49,7 @@ function needsOriginalDeterministicParse(input: string, result: ParseResult): bo
   if (hasExplicitBiweeklyRule(input) && result.events.length > 0 && result.events.some((event) => event.repeat !== "biweekly")) return true;
   if (hasExplicitWeeklyRule(input) && result.events.length > 0 && result.events.every((event) => event.repeat !== "weekly")) return true;
   if (hasExplicitCustomWeekRule(input)) return true;
+  if (isMultipleScheduleSentence(input)) return true;
   if (hasWeeklyDuration(input)) return true;
   if (hasRelativeWeeklyStart(input)) return true;
   return false;

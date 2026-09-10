@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/auth";
 import AuthBar from "@/components/AuthBar";
 import { APP_VERSION } from "@/lib/version";
+import FontSizeSettings from "@/components/FontSizeSettings";
 
 export default async function SettingsPage() {
   const store = await cookies();
@@ -53,6 +54,11 @@ export default async function SettingsPage() {
         <p className="mt-2 text-xs leading-5 text-zinc-500">
           日程保存在服务器数据库；打开过的日程会按账号缓存到手机本地，断网时可继续查看（离线模式），联网后自动刷新。
         </p>
+      </section>
+
+      <section className="ui-card mt-4 p-5 text-sm text-zinc-600 md:p-6">
+        <h2 className="text-sm font-semibold text-zinc-800">显示</h2>
+        <FontSizeSettings />
       </section>
 
       <section className="ui-card mt-4 p-5 text-sm text-zinc-600 md:p-6">

@@ -7,6 +7,25 @@
   --border: #dce8f5;
 }
 
+/* 字号设置使用根字号统一缩放 rem 布局；移动端大字号略微限幅，保持时间线可用。 */
+html[data-font-size="small"] {
+  font-size: 94%;
+}
+
+html[data-font-size="large"] {
+  font-size: 108%;
+}
+
+@media (max-width: 640px) {
+  html[data-font-size="small"] {
+    font-size: 95%;
+  }
+
+  html[data-font-size="large"] {
+    font-size: 106%;
+  }
+}
+
 body {
   min-height: 100vh;
   background:

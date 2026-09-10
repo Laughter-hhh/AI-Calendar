@@ -51,6 +51,8 @@ async function main() {
   const aiInputSource = await readFile(new URL("../frontend/src/components/AiInput.tsx", import.meta.url), "utf8");
   const eventListSource = await readFile(new URL("../frontend/src/components/EventList.tsx", import.meta.url), "utf8");
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
+  const fontSettingsSource = await readFile(new URL("../frontend/src/components/FontSizeSettings.tsx", import.meta.url), "utf8");
+  const fontRuntimeSource = await readFile(new URL("../frontend/src/components/FontSizeRuntime.tsx", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
   check("笔记本路由提供即时加载反馈", notesLoadingSource.includes("aria-busy") && notesLoadingSource.includes("animate-pulse"));
   check("笔记本不在挂载时重复请求列表", !notesSource.includes('fetch("/api/notes");'));
@@ -114,6 +116,15 @@ async function main() {
       weekViewSource.includes("relative min-w-0 flex-1") &&
       dayTimelineSource.includes("grid min-w-0 flex-1") &&
       scheduleSource.includes("pageshow")
+  );
+  check(
+    "支持设置字体大小并跨页面保存",
+    fontSettingsSource.includes("小") &&
+    fontSettingsSource.includes("标准") &&
+      fontSettingsSource.includes("大") &&
+      fontSettingsSource.includes("applyFontSize") &&
+      fontRuntimeSource.includes("aical:font-size") &&
+      fontRuntimeSource.includes("dataset.fontSize")
   );
 
   const email = `ui-${Date.now()}@test.local`;
@@ -211,6 +222,7 @@ async function main() {
       settingsPage.text.includes("版本"),
     `status=${settingsPage.status}`
   );
+  check("设置页包含字体大小调整", settingsPage.text.includes("字体大小") && settingsPage.text.includes("显示"));
   const helpPage = await api("/settings/help");
   check(
     "帮助页返回 200 且含使用说明",

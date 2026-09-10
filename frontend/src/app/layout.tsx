@@ -3,6 +3,7 @@ import "./globals.css";
 import OfflineRegistrar from "@/components/OfflineRegistrar";
 import SwipeBack from "@/components/SwipeBack";
 import VersionChecker from "@/components/VersionChecker";
+import FontSizeRuntime from "@/components/FontSizeRuntime";
 
 export const metadata: Metadata = {
   title: "AI Calendar - AI 时间管理助手",
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OfflineRegistrar />
         <SwipeBack />
         <VersionChecker />
+        <FontSizeRuntime />
         {children}
       </body>
     </html>

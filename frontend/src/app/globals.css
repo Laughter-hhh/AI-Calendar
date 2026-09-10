@@ -75,6 +75,13 @@ textarea {
   transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 
+/* 日期和日历工具栏的紧凑控件：减少移动端垂直占用，同时保留清晰点击区域。 */
+.ui-button-compact {
+  min-height: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+}
+
 .ui-button-primary {
   color: #fff;
   background: linear-gradient(135deg, #2563eb, #0891b2);
@@ -125,6 +132,12 @@ textarea {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
+.ui-input-compact {
+  min-height: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+}
+
 .ui-input:focus {
   border-color: #38bdf8;
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
@@ -140,6 +153,12 @@ textarea {
   padding: 0.25rem;
 }
 
+.ui-segment-compact {
+  gap: 0.125rem;
+  border-radius: 0.7rem;
+  padding: 0.125rem;
+}
+
 .ui-segment-item,
 .ui-segment-active {
   display: inline-flex;
@@ -152,6 +171,13 @@ textarea {
   font-weight: 600;
   white-space: nowrap;
   transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.ui-segment-compact-item {
+  min-height: 1.75rem;
+  border-radius: 0.5rem;
+  padding: 0 0.6rem;
+  font-size: 0.6875rem;
 }
 
 .ui-segment-item {

@@ -19,8 +19,8 @@ export default function DateNav({
 
   const isCurrent = view === "month" ? date.slice(0, 7) === todayStr().slice(0, 7) : date === todayStr();
   // 日期切换按钮在窄屏上不得被压缩换行，日期输入框会优先收缩。
-  const btn = "ui-button-secondary h-9 min-w-9 shrink-0 whitespace-nowrap px-2 text-sm";
-  const seg = (active: boolean) => (active ? "ui-segment-active px-2.5" : "ui-segment-item px-2.5");
+  const btn = "ui-button-secondary ui-button-compact min-w-8 shrink-0 whitespace-nowrap px-2 text-sm";
+  const seg = (active: boolean) => (active ? "ui-segment-active ui-segment-compact-item" : "ui-segment-item ui-segment-compact-item");
 
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1.5 text-sm">
@@ -32,7 +32,7 @@ export default function DateNav({
         type={view === "month" ? "month" : "date"}
         value={view === "month" ? date.slice(0, 7) : date}
         onChange={(e) => e.target.value && onNavigate(view === "month" ? `${e.target.value}-01` : e.target.value, view)}
-        className="ui-input h-9 min-w-0 w-full px-2 text-sm sm:w-40 sm:flex-none"
+        className="ui-input ui-input-compact min-w-0 w-full px-2 text-sm sm:w-40 sm:flex-none"
       />
       <button onClick={() => onNavigate(shift(date, 1, view), view)} className={btn} aria-label="下一个周期">
         ›
@@ -44,7 +44,7 @@ export default function DateNav({
       )}
       </div>
 
-      <div className="ui-segment ml-auto shrink-0 max-[420px]:basis-full max-[420px]:justify-end">
+      <div className="ui-segment ui-segment-compact ml-auto shrink-0">
         {(["day", "week", "month"] as const).map((v) => (
           <button
             key={v}

@@ -45,6 +45,7 @@ async function main() {
   const notesLoadingSource = await readFile(new URL("../frontend/src/app/notes/loading.tsx", import.meta.url), "utf8");
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
   const dateNavSource = await readFile(new URL("../frontend/src/components/DateNav.tsx", import.meta.url), "utf8");
+  const calendarSwitcherSource = await readFile(new URL("../frontend/src/components/CalendarSwitcher.tsx", import.meta.url), "utf8");
   const weekViewSource = await readFile(new URL("../frontend/src/components/WeekView.tsx", import.meta.url), "utf8");
   const dayTimelineSource = await readFile(new URL("../frontend/src/components/DayTimelineView.tsx", import.meta.url), "utf8");
   const colorsSource = await readFile(new URL("../frontend/src/lib/colors.ts", import.meta.url), "utf8");
@@ -100,6 +101,13 @@ async function main() {
   check(
     "手机版“今天”按钮保持单行",
     dateNavSource.includes("shrink-0 whitespace-nowrap") && dateNavSource.includes("title=\"回到今天\"")
+  );
+  check(
+    "移动端日期和日历控件使用紧凑尺寸",
+    dateNavSource.includes("ui-segment-compact") &&
+      dateNavSource.includes("ui-button-compact") &&
+      calendarSwitcherSource.includes("ui-input-compact") &&
+      calendarSwitcherSource.includes("ui-button-compact")
   );
   check(
     "事项颜色使用柔和色板",

@@ -8,7 +8,7 @@ import type { CalendarInfo } from "@/lib/calendars";
 import { isValidDateStr, shiftDate, shiftMonth, todayStr } from "@/lib/date";
 import { APP_VERSION } from "@/lib/version";
 import { cacheSet, fetchCachedJson, isOnline, setOfflineUserId } from "@/lib/offline";
-import DateNav from "./DateNav";
+import DateNav, { ViewSwitcher } from "./DateNav";
 import SearchBar from "./SearchBar";
 import EventList from "./EventList";
 import ExportButton from "./ExportButton";
@@ -287,7 +287,7 @@ export default function ScheduleArea({
       {/* 主功能栏：日期切换 + 视图 + 更多菜单 */}
       <div className="mb-3 flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <DateNav date={date} view={view} onNavigate={navigate} />
+          <DateNav date={date} view={view} onNavigate={navigate} showView={false} />
         </div>
         <button
           type="button"
@@ -308,14 +308,18 @@ export default function ScheduleArea({
         </button>
       </div>
 
-      <CalendarSwitcher
-        calendars={calendars}
-        activeId={activeCalendarId}
-        onChange={selectCalendar}
-        onCreate={createCalendar}
-        onRename={renameCalendar}
-        onDelete={removeCalendar}
-      />
+      <div className="mb-2 flex min-w-0 items-start gap-1.5">
+        <CalendarSwitcher
+          className="mb-0 min-w-0 flex-1"
+          calendars={calendars}
+          activeId={activeCalendarId}
+          onChange={selectCalendar}
+          onCreate={createCalendar}
+          onRename={renameCalendar}
+          onDelete={removeCalendar}
+        />
+        <ViewSwitcher view={view} onChange={(nextView) => navigate(date, nextView)} />
+      </div>
 
       {/* 搜索行（点菜单里的"搜索"展开） */}
       {searchOpen && (

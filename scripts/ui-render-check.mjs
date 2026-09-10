@@ -110,6 +110,13 @@ async function main() {
       calendarSwitcherSource.includes("ui-button-compact")
   );
   check(
+    "日期操作与日历视图分为两行并保持并排",
+    dateNavSource.includes("showView") &&
+      scheduleSource.includes("showView={false}") &&
+      scheduleSource.includes("<ViewSwitcher") &&
+      scheduleSource.includes('className="mb-0 min-w-0 flex-1"')
+  );
+  check(
     "事项颜色使用柔和色板",
     weekViewSource.includes("bg-red-100/90") &&
       weekViewSource.includes("text-red-800") &&

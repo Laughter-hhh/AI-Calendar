@@ -10,6 +10,7 @@ export default function CalendarSwitcher({
   onCreate,
   onRename,
   onDelete,
+  className,
 }: {
   calendars: CalendarInfo[];
   activeId: number;
@@ -17,6 +18,7 @@ export default function CalendarSwitcher({
   onCreate: (name: string) => Promise<void>;
   onRename: (id: number, name: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  className?: string;
 }) {
   const [manageOpen, setManageOpen] = useState(false);
   const [name, setName] = useState("");
@@ -51,7 +53,7 @@ export default function CalendarSwitcher({
 
   if (!active) return null;
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-sky-100 bg-white/75 px-2 py-1 shadow-sm">
+    <div className={`${className ?? "mb-2"} flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-sky-100 bg-white/75 px-2 py-1 shadow-sm`}>
       <span className="text-[11px] font-semibold text-sky-700/75">当前日历</span>
       <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" aria-hidden="true" />
       <select value={active.id} onChange={(event) => onChange(Number(event.target.value))} className="ui-input ui-input-compact min-w-0 flex-1 px-2 text-xs sm:max-w-xs" aria-label="切换日历">

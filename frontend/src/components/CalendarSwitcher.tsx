@@ -53,7 +53,7 @@ export default function CalendarSwitcher({
 
   if (!active) return null;
   return (
-    <div className={`${className ?? "mb-2"} flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-sky-100 bg-white/75 px-2 py-1 shadow-sm`}>
+    <div className={`${className ?? "mb-2"} flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-sky-100 bg-white/75 px-2 py-0 shadow-sm`}>
       <span className="text-[11px] font-semibold text-sky-700/75">当前日历</span>
       <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" aria-hidden="true" />
       <select value={active.id} onChange={(event) => onChange(Number(event.target.value))} className="ui-input ui-input-compact min-w-0 flex-1 px-2 text-xs sm:max-w-xs" aria-label="切换日历">
@@ -66,7 +66,7 @@ export default function CalendarSwitcher({
             <input value={name} onChange={(event) => setName(event.target.value)} maxLength={40} placeholder="新日历名称，例如：家人" className="ui-input ui-input-compact min-w-0 flex-1 px-2.5 text-xs" />
             <button type="button" disabled={busy} onClick={() => void create()} className="ui-button-primary ui-button-compact px-2.5 text-[11px]">＋ 新建</button>
             <button type="button" disabled={busy} onClick={() => void rename(active)} className="ui-button-secondary ui-button-compact px-2.5 text-[11px]">重命名</button>
-            <button type="button" disabled={busy || calendars.length <= 1} onClick={() => void remove(active)} className="ui-button-compact h-8 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-600 disabled:cursor-not-allowed disabled:opacity-45">删除</button>
+            <button type="button" disabled={busy || calendars.length <= 1} onClick={() => void remove(active)} className="ui-button-danger ui-button-compact text-[11px]">删除</button>
           </div>
           <p className="mt-2 text-[11px] text-slate-500">每个日历的日程、节日标记独立保存；删除日历会同时删除其中内容。</p>
           {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}

@@ -54,6 +54,7 @@ async function main() {
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
   const fontSettingsSource = await readFile(new URL("../frontend/src/components/FontSizeSettings.tsx", import.meta.url), "utf8");
   const fontRuntimeSource = await readFile(new URL("../frontend/src/components/FontSizeRuntime.tsx", import.meta.url), "utf8");
+  const globalStyleSource = await readFile(new URL("../frontend/src/app/globals.css", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
   check("笔记本路由提供即时加载反馈", notesLoadingSource.includes("aria-busy") && notesLoadingSource.includes("animate-pulse"));
   check("笔记本不在挂载时重复请求列表", !notesSource.includes('fetch("/api/notes");'));
@@ -115,6 +116,15 @@ async function main() {
       scheduleSource.includes("showView={false}") &&
       scheduleSource.includes("<ViewSwitcher") &&
       scheduleSource.includes('className="mb-0 min-w-0 flex-1"')
+  );
+  check(
+    "按钮使用统一标准与紧凑尺寸及危险操作样式",
+    globalStyleSource.includes(".ui-button-primary,") &&
+      globalStyleSource.includes("height: 2.5rem") &&
+      globalStyleSource.includes(".ui-button-compact") &&
+      globalStyleSource.includes("height: 2.25rem") &&
+      globalStyleSource.includes(".ui-button-danger") &&
+      globalStyleSource.includes(".ui-button-icon")
   );
   check(
     "事项颜色使用柔和色板",

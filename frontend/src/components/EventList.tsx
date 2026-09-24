@@ -416,7 +416,7 @@ export default function EventList({
             {!event.ownerEmail && (
               <button
                 onClick={() => setActionId(actionId === event.id ? null : event.id)}
-                className="ui-button-ghost h-9 w-9 shrink-0 px-0 text-base leading-none"
+                className="ui-button-ghost ui-button-icon shrink-0 text-base leading-none"
                 aria-label={`${event.title} 的操作`}
                 aria-expanded={actionId === event.id}
               >
@@ -455,7 +455,7 @@ export default function EventList({
               {event.repeat && (
                 <button
                   onClick={() => removeSingle(event)}
-                  className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100"
+                  className="ui-button-danger"
                 >
                   仅删此日
                 </button>
@@ -470,7 +470,7 @@ export default function EventList({
               )}
               <button
                 onClick={() => removeSeries(event)}
-                className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100"
+                className="ui-button-danger"
               >
                 {event.repeat ? "删除整个系列" : "删除"}
               </button>
@@ -518,7 +518,7 @@ export default function EventList({
                 <button
                   onClick={() => removeSelectedOccurrences(event)}
                   disabled={batchDates.length === 0}
-                  className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="ui-button-danger disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   删除选定日期
                 </button>

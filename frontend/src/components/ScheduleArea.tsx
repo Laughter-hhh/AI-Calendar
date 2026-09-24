@@ -292,7 +292,7 @@ export default function ScheduleArea({
         <button
           type="button"
           onClick={() => { setManualNotice(""); setManualOpen(true); }}
-          className="ui-button-primary h-10 shrink-0 px-3 text-sm sm:px-4"
+          className="ui-button-primary ui-button-compact shrink-0 px-3 text-sm sm:px-4"
           title="手动添加日程"
         >
           <span aria-hidden="true">＋</span><span className="hidden sm:inline">添加</span>
@@ -300,7 +300,7 @@ export default function ScheduleArea({
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="ui-button-secondary h-10 w-11 shrink-0 px-0 text-lg leading-none"
+          className="ui-button-secondary ui-button-compact ui-button-icon shrink-0 text-lg leading-none"
           title="更多功能"
           aria-label="更多功能"
         >

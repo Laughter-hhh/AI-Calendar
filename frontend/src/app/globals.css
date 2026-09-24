@@ -62,24 +62,40 @@ textarea {
 .ui-button-primary,
 .ui-button-secondary,
 .ui-button-ghost {
+  box-sizing: border-box;
   display: inline-flex;
+  width: auto;
   min-height: 2.5rem;
+  height: 2.5rem;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  border-radius: 0.8rem;
+  border-radius: 0.7rem;
   padding: 0 1rem;
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
-  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  vertical-align: middle;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
 }
 
-/* 日期和日历工具栏的紧凑控件：减少移动端垂直占用，同时保留清晰点击区域。 */
+/* 控件尺寸统一：标准 40px，紧凑工具栏 36px。 */
 .ui-button-compact {
-  min-height: 2rem;
-  height: 2rem;
-  border-radius: 0.65rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  padding-inline: 0.75rem;
+}
+
+.ui-button-icon {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  padding-inline: 0;
+}
+
+.ui-button-compact.ui-button-icon {
+  width: 2.25rem;
+  min-width: 2.25rem;
 }
 
 .ui-button-primary {
@@ -89,8 +105,7 @@ textarea {
 }
 
 .ui-button-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(14, 116, 144, 0.28);
+  box-shadow: 0 6px 14px rgba(14, 116, 144, 0.22);
 }
 
 .ui-button-secondary {
@@ -103,6 +118,7 @@ textarea {
 .ui-button-secondary:hover:not(:disabled) {
   border-color: #7dd3fc;
   background: #effaff;
+  box-shadow: 0 2px 7px rgba(56, 103, 148, 0.08);
 }
 
 .ui-button-ghost {
@@ -113,6 +129,55 @@ textarea {
 .ui-button-ghost:hover:not(:disabled) {
   background: #eaf6ff;
   color: #1e4f73;
+}
+
+.ui-button-primary:active:not(:disabled),
+.ui-button-secondary:active:not(:disabled),
+.ui-button-ghost:active:not(:disabled) {
+  box-shadow: inset 0 1px 2px rgba(30, 64, 100, 0.1);
+}
+
+.ui-button-primary:focus-visible,
+.ui-button-secondary:focus-visible,
+.ui-button-ghost:focus-visible,
+.ui-segment-item:focus-visible,
+.ui-segment-active:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.ui-button-danger {
+  box-sizing: border-box;
+  display: inline-flex;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fecdd3;
+  border-radius: 0.7rem;
+  background: #fff1f2;
+  padding: 0 0.75rem;
+  color: #be123c;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.ui-button-danger:hover:not(:disabled) {
+  border-color: #fda4af;
+  background: #ffe4e6;
+}
+
+.ui-button-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.ui-button-danger.ui-button-compact {
+  min-height: 2.25rem;
+  height: 2.25rem;
+  padding-inline: 0.625rem;
 }
 
 .ui-button-primary:disabled,
@@ -133,9 +198,9 @@ textarea {
 }
 
 .ui-input-compact {
-  min-height: 2rem;
-  height: 2rem;
-  border-radius: 0.65rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
 }
 
 .ui-input:focus {
@@ -161,11 +226,13 @@ textarea {
 
 .ui-segment-item,
 .ui-segment-active {
+  box-sizing: border-box;
   display: inline-flex;
-  min-height: 2.25rem;
+  min-height: 2.5rem;
+  height: 2.5rem;
   align-items: center;
   justify-content: center;
-  border-radius: 0.65rem;
+  border-radius: 0.55rem;
   padding: 0 0.8rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -174,9 +241,10 @@ textarea {
 }
 
 .ui-segment-compact-item {
-  min-height: 1.75rem;
+  min-height: 2rem;
+  height: 2rem;
   border-radius: 0.5rem;
-  padding: 0 0.6rem;
+  padding: 0 0.65rem;
   font-size: 0.6875rem;
 }
 
@@ -192,7 +260,7 @@ textarea {
 .ui-segment-active {
   color: #1e3a5f;
   background: #fff;
-  box-shadow: 0 3px 9px rgba(56, 103, 148, 0.12);
+  box-shadow: 0 1px 3px rgba(56, 103, 148, 0.12);
 }
 
 .ui-menu-item {

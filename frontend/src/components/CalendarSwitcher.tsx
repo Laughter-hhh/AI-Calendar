@@ -56,10 +56,10 @@ export default function CalendarSwitcher({
     <div className={`${className ?? "mb-2"} flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-sky-100 bg-white/75 px-2 py-0 shadow-sm`}>
       <span className="text-[11px] font-semibold text-sky-700/75">当前日历</span>
       <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" aria-hidden="true" />
-      <select value={active.id} onChange={(event) => onChange(Number(event.target.value))} className="ui-input ui-input-compact min-w-0 flex-1 px-2 text-xs sm:max-w-xs" aria-label="切换日历">
+      <select value={active.id} onChange={(event) => onChange(Number(event.target.value))} className="ui-input ui-input-compact ui-control-small min-w-0 flex-1 text-xs sm:max-w-xs" aria-label="切换日历">
         {calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}
       </select>
-      <button type="button" onClick={() => { setManageOpen((open) => !open); setError(""); }} className="ui-button-secondary ui-button-compact px-2.5 text-[11px]">管理</button>
+      <button type="button" onClick={() => { setManageOpen((open) => !open); setError(""); }} className="ui-button-secondary ui-button-compact ui-control-small text-[11px]">管理</button>
       {manageOpen && (
         <div className="basis-full border-t border-sky-100 pt-2">
           <div className="flex flex-wrap items-center gap-2">

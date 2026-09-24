@@ -46,6 +46,7 @@ async function main() {
   const scheduleSource = await readFile(new URL("../frontend/src/components/ScheduleArea.tsx", import.meta.url), "utf8");
   const dateNavSource = await readFile(new URL("../frontend/src/components/DateNav.tsx", import.meta.url), "utf8");
   const calendarSwitcherSource = await readFile(new URL("../frontend/src/components/CalendarSwitcher.tsx", import.meta.url), "utf8");
+  const globalStyleSource = await readFile(new URL("../frontend/src/app/globals.css", import.meta.url), "utf8");
   const weekViewSource = await readFile(new URL("../frontend/src/components/WeekView.tsx", import.meta.url), "utf8");
   const dayTimelineSource = await readFile(new URL("../frontend/src/components/DayTimelineView.tsx", import.meta.url), "utf8");
   const colorsSource = await readFile(new URL("../frontend/src/lib/colors.ts", import.meta.url), "utf8");
@@ -54,7 +55,6 @@ async function main() {
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
   const fontSettingsSource = await readFile(new URL("../frontend/src/components/FontSizeSettings.tsx", import.meta.url), "utf8");
   const fontRuntimeSource = await readFile(new URL("../frontend/src/components/FontSizeRuntime.tsx", import.meta.url), "utf8");
-  const globalStyleSource = await readFile(new URL("../frontend/src/app/globals.css", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
   check("笔记本路由提供即时加载反馈", notesLoadingSource.includes("aria-busy") && notesLoadingSource.includes("animate-pulse"));
   check("笔记本不在挂载时重复请求列表", !notesSource.includes('fetch("/api/notes");'));
@@ -109,6 +109,13 @@ async function main() {
       dateNavSource.includes("ui-button-compact") &&
       calendarSwitcherSource.includes("ui-input-compact") &&
       calendarSwitcherSource.includes("ui-button-compact")
+  );
+  check(
+    "当前日历选择框和管理按钮使用较小尺寸",
+    calendarSwitcherSource.includes("ui-input-compact ui-control-small") &&
+      calendarSwitcherSource.includes("ui-button-secondary ui-button-compact ui-control-small") &&
+      globalStyleSource.includes(".ui-control-small") &&
+      globalStyleSource.includes("height: 2rem")
   );
   check(
     "日期操作与日历视图分为两行并保持并排",

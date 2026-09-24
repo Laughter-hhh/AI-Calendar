@@ -71,14 +71,25 @@ jobs:
 
       - name: Prepare deploy bundle
         run: |
+          set -euxo pipefail
           rm -rf bundle bundle.tar.gz
           mkdir -p bundle
-          STANDALONE_DIR="$(dirname "$(find frontend/.next/standalone -name server.js | head -1)")"
-          cp -r "$STANDALONE_DIR/." bundle/
-          cp -r frontend/.next/static bundle/.next/static
-          cp -r frontend/public bundle/public
+          STANDALONE_SERVER="$(find frontend/.next/standalone -type f -name server.js -print -quit)"
+          if [ -z "$STANDALONE_SERVER" ]; then
+            echo "Could not find Next.js standalone server.js"
+            find frontend/.next/standalone -maxdepth 4 -type f | head -100 || true
+            exit 1
+          fi
+          STANDALONE_DIR="$(dirname "$STANDALONE_SERVER")"
+          test -d frontend/.next/static
+          test -d frontend/public
+          cp -a "$STANDALONE_DIR/." bundle/
+          mkdir -p bundle/.next/static bundle/public
+          cp -a frontend/.next/static/. bundle/.next/static/
+          cp -a frontend/public/. bundle/public/
           cp ecosystem.config.cjs bundle/ecosystem.config.cjs
           tar -czf bundle.tar.gz -C bundle .
+          tar -tzf bundle.tar.gz >/dev/null
 
       - name: Upload to server
         uses: appleboy/scp-action@v0.1.7

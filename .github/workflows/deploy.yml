@@ -83,18 +83,43 @@ jobs:
           fi
           test -d frontend/.next/static
           test -d frontend/public
-          cp -Lr "$STANDALONE_DIR/." bundle/
+          cp -a "$STANDALONE_DIR/." bundle/
           mkdir -p bundle/.next/static bundle/public
-          cp -Lr frontend/.next/static/. bundle/.next/static/
-          cp -Lr frontend/public/. bundle/public/
+          cp -a frontend/.next/static/. bundle/.next/static/
+          cp -a frontend/public/. bundle/public/
           cp ecosystem.config.cjs bundle/ecosystem.config.cjs
-          if find bundle -type l -print -quit | grep -q .; then
-            echo "Deploy bundle contains unresolved symbolic links"
-            find bundle -type l -print
+          if find bundle -xtype l -print -quit | grep -q .; then
+            echo "Deploy bundle contains broken symbolic links"
+            find bundle -xtype l -print
             exit 1
           fi
           tar -czf bundle.tar.gz -C bundle .
           tar -tzf bundle.tar.gz >/dev/null
+
+      - name: Standalone bundle smoke test
+        env:
+          BASE_URL: http://127.0.0.1:3200
+          DATABASE_PATH: ${{ runner.temp }}/ai-calendar-standalone-smoke.db
+        run: |
+          set -e
+          cd bundle
+          PORT=3200 HOSTNAME=127.0.0.1 node server.js > "$RUNNER_TEMP/ai-calendar-standalone.log" 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for attempt in {1..30}; do
+            if curl -fsS "$BASE_URL/api/health" >/dev/null; then
+              curl -fsS "$BASE_URL/api/version"
+              exit 0
+            fi
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              cat "$RUNNER_TEMP/ai-calendar-standalone.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/ai-calendar-standalone.log"
+          exit 1
 
       - name: Upload to server
         uses: appleboy/scp-action@v0.1.7

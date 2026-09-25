@@ -7,6 +7,7 @@ module.exports = {
       name: "ai-calendar",
       cwd: "/opt/ai-calendar/app",
       script: "server.js",
+      exec_mode: "fork",
       instances: 1,
       autorestart: true,
       max_memory_restart: "768M",

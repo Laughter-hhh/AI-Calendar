@@ -74,13 +74,13 @@ jobs:
           set -euxo pipefail
           rm -rf bundle bundle.tar.gz
           mkdir -p bundle
-          STANDALONE_SERVER="$(find frontend/.next/standalone -type f -name server.js -print -quit)"
-          if [ -z "$STANDALONE_SERVER" ]; then
-            echo "Could not find Next.js standalone server.js"
-            find frontend/.next/standalone -maxdepth 4 -type f | head -100 || true
+          STANDALONE_DIR="frontend/.next/standalone/frontend"
+          STANDALONE_SERVER="$STANDALONE_DIR/server.js"
+          if [ ! -f "$STANDALONE_SERVER" ]; then
+            echo "Could not find the application standalone server at $STANDALONE_SERVER"
+            find frontend/.next/standalone -maxdepth 5 -type f -name server.js -print || true
             exit 1
           fi
-          STANDALONE_DIR="$(dirname "$STANDALONE_SERVER")"
           test -d frontend/.next/static
           test -d frontend/public
           cp -Lr "$STANDALONE_DIR/." bundle/

@@ -83,11 +83,16 @@ jobs:
           STANDALONE_DIR="$(dirname "$STANDALONE_SERVER")"
           test -d frontend/.next/static
           test -d frontend/public
-          cp -a "$STANDALONE_DIR/." bundle/
+          cp -Lr "$STANDALONE_DIR/." bundle/
           mkdir -p bundle/.next/static bundle/public
-          cp -a frontend/.next/static/. bundle/.next/static/
-          cp -a frontend/public/. bundle/public/
+          cp -Lr frontend/.next/static/. bundle/.next/static/
+          cp -Lr frontend/public/. bundle/public/
           cp ecosystem.config.cjs bundle/ecosystem.config.cjs
+          if find bundle -type l -print -quit | grep -q .; then
+            echo "Deploy bundle contains unresolved symbolic links"
+            find bundle -type l -print
+            exit 1
+          fi
           tar -czf bundle.tar.gz -C bundle .
           tar -tzf bundle.tar.gz >/dev/null
 

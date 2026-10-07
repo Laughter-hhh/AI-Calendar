@@ -115,7 +115,7 @@ async function main() {
     calendarSwitcherSource.includes("ui-input-compact ui-control-small") &&
       calendarSwitcherSource.includes("ui-button-secondary ui-button-compact ui-control-small") &&
       globalStyleSource.includes(".ui-control-small") &&
-      globalStyleSource.includes("height: 2rem")
+      globalStyleSource.includes("height: 1.75rem")
   );
   check(
     "日期操作与日历视图分为两行并保持并排",

@@ -83,6 +83,10 @@ async function main() {
       aiInputSource.includes("保存完成后主动通知当前视图重新读取")
   );
   check(
+    "备用 API 接管时提醒核对解析结果",
+    aiInputSource.includes("自动切换备用服务") && aiInputSource.includes("local-rule-based")
+  );
+  check(
     "日期/视图切换不会混入旧请求或旧日期事项",
     scheduleSource.includes("loadRequestRef") &&
       scheduleSource.includes("requestId !== loadRequestRef.current") &&

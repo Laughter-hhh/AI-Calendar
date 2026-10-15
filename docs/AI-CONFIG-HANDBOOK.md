@@ -8,8 +8,8 @@
 |---|---|---|
 | **DeepSeek 官方 API**（platform.deepseek.com） | ⭐ 推荐主力 | 中文理解强、价格极低；注意网页版余额与 API 平台余额**不通用**，需单独充值（10~20 元用很久） |
 | 硅基流动（SiliconFlow） | 适合 0 元试跑 | 注册送额度 + 免费模型；模型多但质量参差 |
-| 智谱 GLM-4-Flash | 免费档备选 | 轻量任务够用 |
-| 通义 qwen-turbo | 备选 | 阿里系稳定 |
+| 阿里云百炼通义千问 | **推荐第一备用** | 与程序所用 OpenAI Chat Completions 协议兼容；建议按账户可用模型选择 `qwen-plus` |
+| 智谱 GLM | **推荐第二备用** | 独立厂商且兼容 OpenAI Chat Completions；示例模型 `glm-5.3`，以账号开通情况为准 |
 
 **实战结论：解析一句中文日程约 0.01~0.02 元/次，月成本几块钱内——按"中文理解质量 + 稳定"选，DeepSeek 综合最优。**
 
@@ -40,6 +40,12 @@ pm2 restart ai-calendar
 
 > 用 PowerShell 一行改模型：`ssh root@服务器IP "sed -i 's|OPENAI_MODEL=.*|OPENAI_MODEL=deepseek-chat|' /opt/ai-calendar/config.env && pm2 restart ai-calendar"`
 
+### 自动备用 API（推荐）
+
+`OPENAI_*` 仍作为主服务。主服务异常或超时后，程序依次尝试最多 3 个备用服务；每项须配置名称、Base URL、模型名和 Key。超时默认 6.5 秒，可通过 `AI_PROVIDER_TIMEOUT_MS` 设置为 1.5–12 秒。建议使用不同厂商作为备用，以降低单一厂商故障的影响。所有外部服务都不可用时，保留原有本地规则解析兜底。模型只负责把自然语言改写成标准句式，日程创建、日期换算与重复规则仍由本地代码负责。
+
+将 `deploy/config.env.example` 中的 `AI_FALLBACK_1_*`（百炼）和 `AI_FALLBACK_2_*`（智谱）配置追加到服务器 `/opt/ai-calendar/config.env`，然后执行 `pm2 restart ai-calendar`。备用 API 接管时，输入文本会发送给该备用厂商；密钥请只保存在服务器配置中，不要提交到仓库或发到聊天里。语音转文字使用独立的 `OPENAI_STT_*`，不走这些文本解析备用服务。
+
 ### 本地开发（可选）
 
 复制 `frontend/.env.example` → `.env.local` 填 `OPENAI_API_KEY` 等即可。
@@ -48,8 +54,8 @@ pm2 restart ai-calendar
 
 1. **网页实测**：输入一句复杂的话（如"明天下午三点开完会之后去健身房"），观察解析是否规范
 2. **接口验证**（从任何机器）：注册临时账号 → 调 `POST /api/ai/parse` → 看返回的 `provider` 字段
-   - `provider: openai` = 模型版生效
-   - `provider: local-rule-based` = 未配置 Key 或模型失败，走本地规则
+   - `provider: openai` = 主模型生效；`provider: qwen` / `glm` = 对应备用模型接管
+   - `provider: local-rule-based` = 未配置 Key 或所有模型失败，走本地规则
 
 ## 四、模型选择实战结论（重要）
 

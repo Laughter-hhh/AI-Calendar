@@ -4,6 +4,7 @@
 import { localParser } from "./providers/local";
 import { isCompositeScheduleSentence, isDeadlineSentence, isMultipleScheduleSentence } from "./providers/local";
 import { OpenAICompatibleParser } from "./providers/openai";
+import { tryProviderChain } from "./provider-chain";
 import type { ParseContext, ParseResult } from "./types";
 import { getConfig } from "./config";
 
@@ -59,18 +60,45 @@ export async function parseEvent(
   text: string,
   context?: ParseContext
 ): Promise<{ result: ParseResult; provider: string }> {
-  // 配置了 API Key 时：模型理解 + 标准化，固定程序执行
-  const apiKey = getConfig("OPENAI_API_KEY");
-  if (apiKey) {
-    try {
-      const parser = new OpenAICompatibleParser({
+  // 按主模型、备用模型顺序尝试。每个模型只负责标准化；日程字段仍由本地解析器生成。
+  const providers: Array<{ name: string; parser: OpenAICompatibleParser }> = [];
+  const primaryKey = getConfig("OPENAI_API_KEY");
+  if (primaryKey) {
+    providers.push({
+      name: "openai",
+      parser: new OpenAICompatibleParser({
         ...process.env,
-        OPENAI_API_KEY: apiKey,
+        OPENAI_API_KEY: primaryKey,
         OPENAI_BASE_URL: getConfig("OPENAI_BASE_URL") ?? process.env.OPENAI_BASE_URL,
         OPENAI_MODEL: getConfig("OPENAI_MODEL") ?? process.env.OPENAI_MODEL,
-      });
-      const canonical = await parser.normalize(text, context);
-      if (canonical) {
+        AI_PROVIDER_TIMEOUT_MS: getConfig("AI_PROVIDER_TIMEOUT_MS"),
+      }, "openai"),
+    });
+  }
+  for (let index = 1; index <= 3; index += 1) {
+    const prefix = `AI_FALLBACK_${index}`;
+    const apiKey = getConfig(`${prefix}_API_KEY`);
+    const baseUrl = getConfig(`${prefix}_BASE_URL`);
+    const model = getConfig(`${prefix}_MODEL`);
+    if (!apiKey || !baseUrl || !model) continue;
+    const name = getConfig(`${prefix}_NAME`)?.trim() || `fallback-${index}`;
+    providers.push({
+      name,
+      parser: new OpenAICompatibleParser({
+        OPENAI_API_KEY: apiKey,
+        OPENAI_BASE_URL: baseUrl,
+        OPENAI_MODEL: model,
+        AI_PROVIDER_TIMEOUT_MS: getConfig("AI_PROVIDER_TIMEOUT_MS"),
+      }, name),
+    });
+  }
+
+  const parsed = await tryProviderChain(
+    providers.map(({ name, parser }) => ({
+      name,
+      run: async () => {
+        const canonical = await parser.normalize(text, context);
+        if (!canonical) return null;
         // 防模型过度解读：原句没有"前/之前/截止"时，去掉标准句里被模型强加的"前/之前"
         // （例：八月三十一完成年度审核 → 8.31 全天待办，而不是截止提醒）
         const safeCanonical = !isDeadlineSentence(text)
@@ -89,12 +117,12 @@ export async function parseEvent(
         }
         // 只要标准化结果可用（有事件或需要追问），就使用它
         if (result.events.length > 0 || result.missing.length > 0) {
-          return { result, provider: "openai" };
+          return result;
         }
-      }
-    } catch (err) {
-      console.error("AI 标准化失败，已回退到本地解析器：", err);
-    }
-  }
+        return null;
+      },
+    }))
+  );
+  if (parsed) return { result: parsed.value, provider: parsed.name };
   return { result: await localParser.parse(text, context), provider: localParser.name };
 }

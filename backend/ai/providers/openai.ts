@@ -36,16 +36,22 @@ const NORMALIZE_SYSTEM = [
 ].join("\n");
 
 export class OpenAICompatibleParser {
-  readonly name = "openai-compatible";
+  readonly name: string;
 
   private apiKey: string;
   private baseUrl: string;
   private model: string;
+  private timeoutMs: number;
 
-  constructor(env: NodeJS.ProcessEnv = process.env) {
+  constructor(env: Record<string, string | undefined> = process.env, name = env.AI_PROVIDER_NAME ?? "openai") {
+    this.name = name;
     this.apiKey = env.OPENAI_API_KEY ?? "";
     this.baseUrl = (env.OPENAI_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.model = env.OPENAI_MODEL ?? DEFAULT_MODEL;
+    const configuredTimeout = Number(env.AI_PROVIDER_TIMEOUT_MS);
+    this.timeoutMs = Number.isFinite(configuredTimeout)
+      ? Math.min(12_000, Math.max(1_500, configuredTimeout))
+      : 6_500;
   }
 
   /** 把用户自然语言改写为标准句式（本地规则可识别） */
@@ -55,34 +61,43 @@ export class OpenAICompatibleParser {
         ? `已有信息（JSON）：${JSON.stringify(context)}\n用户最新输入：${text}`
         : text;
 
-    const res = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [
-          { role: "system", content: NORMALIZE_SYSTEM },
-          { role: "user", content: userContent },
-        ],
-        temperature: 0,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: "system", content: NORMALIZE_SYSTEM },
+            { role: "user", content: userContent },
+          ],
+          temperature: 0,
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`${this.name} 服务响应异常：${res.status}`);
+      }
 
-    if (!res.ok) {
-      throw new Error(`AI 服务响应异常：${res.status} ${await res.text()}`);
+      const data = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) throw new Error(`${this.name} 服务返回内容为空`);
+      return content
+        .replace(/^```[\s\S]*?```$/, "")
+        .replace(/[。！？!?]$/, "")
+        .trim();
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error(`${this.name} 请求超时`);
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("AI 服务返回内容为空");
-    return content
-      .replace(/^```[\s\S]*?```$/, "")
-      .replace(/[。！？!?]$/, "")
-      .trim();
   }
 }

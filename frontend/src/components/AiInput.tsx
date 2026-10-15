@@ -79,6 +79,13 @@ export default function AiInput() {
       }
       const r: ParseResult = data.result;
       setResult(r);
+      if (data.provider && data.provider !== "openai") {
+        setInfo(
+          data.provider === "local-rule-based"
+            ? "AI 服务暂时不可用，已使用本地规则解析；复杂日程请仔细核对。"
+            : "主 AI 服务暂时不可用，已自动切换备用服务；请核对解析结果后再确认。"
+        );
+      }
       if (r.missing.length > 0) {
         // 信息不全：追问用户（产品原则：不猜测）
         setContext({

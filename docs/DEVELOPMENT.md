@@ -174,7 +174,7 @@ AI-Calendar/
 - 缺失追问：缺标题/日期 → missing 数组；**有日期无时间 → 全天待办（不追问）**（v4.3.7 起）
 - 清理口语前缀：我要/我想/帮我/请/从…开始
 
-配置 `OPENAI_API_KEY` 后走 OpenAI 兼容接口（`backend/ai/providers/openai.ts`），失败自动回退本地解析器。
+配置 `OPENAI_API_KEY` 后先走主 OpenAI 兼容接口（`backend/ai/providers/openai.ts`）；服务异常/超时后按序尝试 `AI_FALLBACK_1_*` 至 `AI_FALLBACK_3_*`，全部失败才回退本地解析器。模型只做自然语言标准化，日程生成仍由本地固定逻辑负责。
 
 ## 9. 测试
 

@@ -14,7 +14,8 @@
     "test:calendar-features": "node scripts/calendar-feature-test.mjs",
     "test:timeline": "node scripts/timeline-layout-test.mjs",
     "test:offline": "node scripts/offline-test.mjs",
-    "test:parser": "node scripts/parser-cases.mjs"
+    "test:parser": "node scripts/parser-cases.mjs",
+    "test:ai-failover": "node scripts/ai-failover-test.mjs"
   },
   "engines": {
     "node": ">=22.5.0"

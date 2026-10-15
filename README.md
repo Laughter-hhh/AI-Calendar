@@ -143,6 +143,17 @@ OPENAI_API_KEY=你的密钥
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_STT_MODEL=whisper-1
+
+# 主模型故障时的可选备用 API，按 1 → 2 → 3 顺序尝试
+AI_PROVIDER_TIMEOUT_MS=6500
+AI_FALLBACK_1_NAME=qwen
+AI_FALLBACK_1_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_FALLBACK_1_MODEL=qwen-plus
+AI_FALLBACK_1_API_KEY=你的百炼API密钥
+AI_FALLBACK_2_NAME=glm
+AI_FALLBACK_2_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+AI_FALLBACK_2_MODEL=glm-5.3
+AI_FALLBACK_2_API_KEY=你的智谱API密钥
 ```
 
 然后重启服务：`pm2 restart ai-calendar`。配置后：AI 解析升级为模型版，**手机端语音识别也可用**（费用极低，Whisper 约 ¥0.04/分钟）。

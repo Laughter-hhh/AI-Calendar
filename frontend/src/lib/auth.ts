@@ -1,6 +1,6 @@
 // 认证模块：邮箱 + 密码（scrypt 加密）+ 服务端会话（Cookie）
 // MVP 保持简单：不引入第三方依赖，用 Node 内置 crypto 实现
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getDb } from "./db";
 
 export const SESSION_COOKIE = "ai_calendar_session";
@@ -28,6 +28,49 @@ export function verifyPassword(password: string, stored: string): boolean {
   if (!salt || !hash) return false;
   const candidate = scryptSync(password, salt, 64);
   return timingSafeEqual(candidate, Buffer.from(hash, "hex"));
+}
+
+/** 创建短时重置令牌；数据库只保存摘要，原始令牌仅发送给邮箱所有者。 */
+export function createPasswordResetToken(email: string): string | null {
+  const db = getDb();
+  const normalized = email.trim().toLowerCase();
+  const user = db.prepare("SELECT id FROM users WHERE email = ?").get(normalized) as { id: number | bigint } | undefined;
+  if (!user) return null;
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
+  db.prepare("DELETE FROM password_reset_tokens WHERE user_id = ?").run(Number(user.id));
+  db.prepare("INSERT INTO password_reset_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
+    .run(tokenHash, Number(user.id), expiresAt);
+  return token;
+}
+
+/** 令牌原子性消费；成功后吊销该账号所有现有会话。 */
+export function resetPasswordWithToken(token: string, password: string): boolean {
+  if (!/^[A-Za-z0-9_-]{40,50}$/.test(token) || password.length < 8 || password.length > 256) return false;
+  const db = getDb();
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const record = db.prepare(
+      "SELECT user_id FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?"
+    ).get(tokenHash, new Date().toISOString()) as { user_id: number | bigint } | undefined;
+    if (!record) {
+      db.exec("ROLLBACK");
+      return false;
+    }
+    const userId = Number(record.user_id);
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hashPassword(password), userId);
+    db.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE token_hash = ?").run(tokenHash);
+    db.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM password_reset_tokens WHERE user_id = ? AND token_hash != ?").run(userId, tokenHash);
+    db.exec("COMMIT");
+    return true;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function registerUser(

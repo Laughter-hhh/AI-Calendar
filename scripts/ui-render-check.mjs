@@ -55,9 +55,31 @@ async function main() {
   const swipeSource = await readFile(new URL("../frontend/src/components/SwipeBack.tsx", import.meta.url), "utf8");
   const fontSettingsSource = await readFile(new URL("../frontend/src/components/FontSizeSettings.tsx", import.meta.url), "utf8");
   const fontRuntimeSource = await readFile(new URL("../frontend/src/components/FontSizeRuntime.tsx", import.meta.url), "utf8");
+  const authCardSource = await readFile(new URL("../frontend/src/components/AuthCard.tsx", import.meta.url), "utf8");
+  const resetFormSource = await readFile(new URL("../frontend/src/components/PasswordResetForm.tsx", import.meta.url), "utf8");
+  const authSource = await readFile(new URL("../frontend/src/lib/auth.ts", import.meta.url), "utf8");
+  const resetEmailSource = await readFile(new URL("../frontend/src/lib/password-reset-email.ts", import.meta.url), "utf8");
   check("笔记本返回日历优先复用历史页面", notesSource.includes("router.back()") && notesSource.includes('sessionStorage.getItem("aical:notes-return")'));
   check("笔记本路由提供即时加载反馈", notesLoadingSource.includes("aria-busy") && notesLoadingSource.includes("animate-pulse"));
   check("笔记本不在挂载时重复请求列表", !notesSource.includes('fetch("/api/notes");'));
+  check(
+    "登录页提供邮箱密码重置入口",
+    authCardSource.includes("忘记密码？") && authCardSource.includes("password-reset/request")
+  );
+  check(
+    "重置令牌限时单次使用且仅保存哈希",
+    authSource.includes("createHash(\"sha256\")") &&
+      authSource.includes("expires_at > ?") &&
+      authSource.includes("used_at IS NULL") &&
+      authSource.includes("DELETE FROM sessions WHERE user_id = ?")
+  );
+  check(
+    "密码重置邮件强制 HTTPS 公网地址",
+    resetEmailSource.includes("url.protocol !== \"https:\"") &&
+      resetEmailSource.includes("RESEND_API_KEY") &&
+      resetEmailSource.includes("link.hash = new URLSearchParams") &&
+      resetFormSource.includes("window.location.hash.slice(1)")
+  );
   check(
     "日历菜单使用兼容导航打开笔记本",
     scheduleSource.includes('<a') && scheduleSource.includes('href="/notes"') && scheduleSource.includes('sessionStorage.setItem("aical:notes-return"')

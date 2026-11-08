@@ -158,6 +158,10 @@ AI_FALLBACK_2_API_KEY=你的智谱API密钥
 
 然后重启服务：`pm2 restart ai-calendar`。配置后：AI 解析升级为模型版，**手机端语音识别也可用**（费用极低，Whisper 约 ¥0.04/分钟）。
 
+### 密码重置邮件（可选）
+
+登录页的“忘记密码”使用 Resend 发送一次性链接。必须有 HTTPS 域名和已验证发件域名，再配置 `RESEND_API_KEY`、`PASSWORD_RESET_FROM`、`PASSWORD_RESET_BASE_URL=https://你的域名`；未配置时入口会提示联系管理员。链接 30 分钟有效，重置后所有旧会话失效。该流程只允许重设密码，不能读取现有密码。配置样例见 `deploy/config.env.example`。
+
 ## 🧪 测试
 
 启动服务后，在项目根目录运行：

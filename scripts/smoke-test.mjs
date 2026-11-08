@@ -65,6 +65,24 @@ async function main() {
   const home = await api("/");
   check("首页返回 200 且包含产品名", home.status === 200 && home.text.includes("AI Calendar"), `status=${home.status}`);
 
+  console.log("\n1b) 密码重置保护");
+  const invalidReset = await api("/api/auth/password-reset/confirm", {
+    method: "POST",
+    body: { token: "invalid-reset-token", password: "new-password-123" },
+  });
+  check("无效重置令牌不能修改密码", invalidReset.status === 400);
+  const unknownResetEmail = `password-reset-unknown-${Date.now()}@test.local`;
+  const resetRequest = await api("/api/auth/password-reset/request", {
+    method: "POST",
+    body: { email: unknownResetEmail },
+  });
+  check(
+    "未知邮箱不泄露账号是否存在，未配置时明确禁用重置服务",
+    (resetRequest.status === 200 && resetRequest.data?.message?.includes("如果该邮箱已注册")) ||
+      (resetRequest.status === 503 && resetRequest.data?.error?.includes("尚未配置")),
+    JSON.stringify(resetRequest.data)
+  );
+
   console.log("\n2) 注册");
   const email = `smoke-${Date.now()}@test.local`;
   const reg = await api("/api/auth/register", { method: "POST", body: { email, password: "123456" } });
